@@ -5,7 +5,6 @@ export const FloatingNav = ({ current, onChange }) => {
     const items = [
         { id: 'dashboard', icon: LayoutGrid },
         { id: 'movimentacao', icon: ArrowLeftRight },
-        { id: 'contas', icon: Calendar },
         { id: 'orcamento', icon: PieChart },
         { id: 'metas', icon: Target },
         { id: 'lista', icon: ListChecks },

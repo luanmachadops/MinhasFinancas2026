@@ -167,7 +167,7 @@ export const DataProvider = ({ children }) => {
         return items.filter(item => item.user_id === activeWorkspace.id);
     };
 
-    // Add Wrapper
+    // Add Wrapper with balance tracking for transactions
     const createAddWrapper = (addFn) => (item) => {
         const descriptionSuffix = (activeWorkspace.type === 'shared' && activeWorkspace.permissions?.write)
             ? ` (por ${user?.email || 'convidado'})`
@@ -179,6 +179,76 @@ export const DataProvider = ({ children }) => {
         }
 
         addFn(newItem);
+    };
+
+    // Wrapper específico para transações que atualiza o saldo da conta
+    const addTransactionWithBalance = (item) => {
+        const newItem = { ...item, user_id: activeWorkspace.id };
+
+        // Adicionar a transação
+        transactions.add(newItem);
+
+        // Se a transação está paga e tem uma conta vinculada, atualizar o saldo
+        if (newItem.is_paid !== false && newItem.account_id) {
+            const account = accounts.data.find(a => a.id === newItem.account_id);
+            if (account) {
+                const amount = parseFloat(newItem.amount) || 0;
+                let newBalance = account.balance || 0;
+
+                if (newItem.type === 'entrada') {
+                    // Receita: aumenta o saldo
+                    newBalance += amount;
+                } else if (newItem.type === 'saida') {
+                    if (account.type === 'cartao') {
+                        // Cartão de crédito: aumenta a fatura (balance é o valor da fatura)
+                        newBalance += amount;
+                    } else {
+                        // Conta bancária: diminui o saldo
+                        newBalance -= amount;
+                    }
+                } else if (newItem.type === 'investimento') {
+                    // Investimento: diminui saldo (saída para investimento)
+                    newBalance -= amount;
+                }
+
+                accounts.update(account.id, { balance: newBalance });
+            }
+        }
+    };
+
+    // Wrapper para remover transação e reverter o saldo
+    const removeTransactionWithBalance = (transactionId) => {
+        const transaction = transactions.data.find(t => t.id === transactionId);
+
+        // Se a transação existe, estava paga e tinha conta, reverter o saldo
+        if (transaction && transaction.is_paid !== false && transaction.account_id) {
+            const account = accounts.data.find(a => a.id === transaction.account_id);
+            if (account) {
+                const amount = parseFloat(transaction.amount) || 0;
+                let newBalance = account.balance || 0;
+
+                if (transaction.type === 'entrada') {
+                    // Receita removida: diminui o saldo
+                    newBalance -= amount;
+                } else if (transaction.type === 'saida') {
+                    if (account.type === 'cartao') {
+                        // Despesa de cartão removida: diminui a fatura
+                        newBalance -= amount;
+                    } else {
+                        // Despesa de conta removida: aumenta o saldo
+                        newBalance += amount;
+                    }
+                } else if (transaction.type === 'investimento') {
+                    // Investimento removido: aumenta o saldo
+                    newBalance += amount;
+                }
+
+                accounts.update(account.id, { balance: newBalance });
+            }
+        }
+
+        // Remover a transação
+        transactions.remove(transactionId);
     };
 
     const isReadOnly = activeWorkspace.type === 'shared' && !activeWorkspace.permissions?.write;
@@ -193,9 +263,9 @@ export const DataProvider = ({ children }) => {
 
         // Filtered Data
         transactions: filterByWorkspace(transactions.data),
-        addTransaction: createAddWrapper(transactions.add),
+        addTransaction: addTransactionWithBalance,
         updateTransaction: transactions.update,
-        removeTransaction: transactions.remove,
+        removeTransaction: removeTransactionWithBalance,
 
         categories: filterByWorkspace(categories.data),
         addCategory: createAddWrapper(categories.add),
