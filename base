@@ -1,0 +1,928 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+    LayoutGrid,
+    ArrowLeftRight,
+    Tags,
+    Plus,
+    ArrowUpRight,
+    ArrowDownLeft,
+    X,
+    Home,
+    ShoppingCart,
+    Car,
+    Utensils,
+    ChevronDown,
+    ChevronRight,
+    Landmark,
+    PiggyBank,
+    Briefcase,
+    Settings,
+    Sun,
+    Moon,
+    User,
+    Bell,
+    Target,
+    ListChecks,
+    Gift,
+    Heart,
+    Plane,
+    Book,
+    Smile,
+    Check,
+    Circle,
+    Trash2,
+    DollarSign,
+    CreditCard,
+    Banknote,
+    Calendar as CalendarIcon,
+    TrendingUp,
+    TrendingDown,
+    Wallet,
+    Sparkles,
+    Filter,
+    MoreHorizontal,
+    Search,
+    Zap,
+    ShieldCheck,
+    CreditCard as CardIcon
+} from 'lucide-react';
+
+// --- CONFIGURAÇÃO DE DESIGN & UTILITÁRIOS ---
+
+// Cores e Gradientes Globais
+const GRADIENTS = {
+    primary: 'bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600',
+    success: 'bg-gradient-to-br from-emerald-500 to-teal-600',
+    danger: 'bg-gradient-to-br from-rose-500 to-pink-600',
+    warning: 'bg-gradient-to-br from-amber-400 to-orange-500',
+    card: 'bg-slate-900/60 backdrop-blur-xl border border-slate-800/50',
+    glass: 'bg-white/10 backdrop-blur-lg border border-white/10',
+    surface: 'bg-slate-950',
+    textMain: 'text-slate-50',
+    textMuted: 'text-slate-400'
+};
+
+const formatCurrency = (value) => {
+    const numericValue = Number(value);
+    if (isNaN(numericValue)) return 'R$ 0,00';
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+    }).format(numericValue);
+};
+
+const formatDate = (dateString) => {
+    try {
+        const date = new Date(dateString);
+        const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+        const correctedDate = new Date(date.getTime() + userTimezoneOffset);
+        return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(correctedDate);
+    } catch (e) { return 'Data Inválida'; }
+};
+
+const getTodayDate = () => new Date().toISOString().split('T')[0];
+
+// --- COMPONENTES UI MODERNOS (NEO-COMPONENTS) ---
+
+const NeoCard = ({ children, className = "", onClick }) => (
+    <div
+        onClick={onClick}
+        className={`
+      ${GRADIENTS.card} 
+      rounded-3xl p-5 shadow-2xl shadow-black/20 
+      transition-all duration-300 
+      ${onClick ? 'cursor-pointer hover:bg-slate-800/60 hover:scale-[1.02] active:scale-95' : ''}
+      ${className}
+    `}
+    >
+        {children}
+    </div>
+);
+
+const NeoButton = ({ children, variant = 'primary', className = "", onClick, icon: Icon }) => {
+    const variants = {
+        primary: `${GRADIENTS.primary} text-white shadow-lg shadow-blue-900/30 hover:shadow-blue-500/20`,
+        success: `${GRADIENTS.success} text-white shadow-lg shadow-emerald-900/30 hover:shadow-emerald-500/20`,
+        danger: `${GRADIENTS.danger} text-white shadow-lg shadow-rose-900/30 hover:shadow-rose-500/20`,
+        ghost: `bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 hover:text-white`,
+        glass: `${GRADIENTS.glass} text-white hover:bg-white/20`,
+    };
+
+    return (
+        <button
+            onClick={onClick}
+            className={`
+        relative overflow-hidden group
+        px-4 py-3 rounded-2xl font-semibold text-sm tracking-wide
+        flex items-center justify-center gap-2
+        transition-all duration-300 active:scale-95
+        ${variants[variant]}
+        ${className}
+      `}
+        >
+            {Icon && <Icon className="w-4 h-4" />}
+            {children}
+            {/* Efeito de Brilho ao passar o mouse */}
+            <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" />
+        </button>
+    );
+};
+
+const NeoInput = ({ label, id, ...props }) => (
+    <div className="group">
+        <label htmlFor={id} className="block text-xs font-medium text-slate-400 mb-1.5 ml-1 group-focus-within:text-blue-400 transition-colors">{label}</label>
+        <input
+            id={id}
+            {...props}
+            className="
+        w-full bg-slate-950/50 border border-slate-800 
+        text-slate-100 rounded-xl px-4 py-3.5
+        focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:outline-none
+        placeholder-slate-600 transition-all
+      "
+        />
+    </div>
+);
+
+const FloatingActionButton = ({ onClick }) => (
+    <button
+        onClick={onClick}
+        className={`
+      fixed bottom-28 right-6 z-40
+      w-14 h-14 rounded-full
+      ${GRADIENTS.primary}
+      flex items-center justify-center
+      shadow-2xl shadow-blue-600/40
+      text-white
+      transition-transform duration-300 hover:scale-110 active:scale-90 active:rotate-90
+    `}
+    >
+        <Plus className="w-7 h-7" />
+    </button>
+);
+
+const ModalOverlay = ({ children, onClose, title }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={onClose} />
+        <div className="
+      relative w-full max-w-md 
+      bg-slate-900 border border-slate-800 
+      rounded-3xl shadow-2xl shadow-black/50
+      flex flex-col max-h-[85vh]
+      animate-[scaleIn_0.3s_ease-out]
+    ">
+            <div className="flex items-center justify-between p-6 border-b border-slate-800/50">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-blue-400" />
+                    {title}
+                </h2>
+                <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+                    <X className="w-5 h-5" />
+                </button>
+            </div>
+            <div className="p-6 overflow-y-auto custom-scrollbar">
+                {children}
+            </div>
+        </div>
+    </div>
+);
+
+// --- ÍCONES E DADOS ---
+const iconMap = {
+    Default: Tags, Home, ShoppingCart, Car, Utensils, Landmark, PiggyBank, Briefcase,
+    Gift, Heart, Plane, Book, Smile, DollarSign, CreditCard, Banknote, Wallet, Sparkles, Zap,
+    ShieldCheck // Adicionado
+};
+const iconList = Object.keys(iconMap);
+
+const IconRender = ({ name, className }) => {
+    const LucideIcon = iconMap[name] || iconMap['Default'];
+    return <LucideIcon className={className} />;
+};
+
+// --- ESTADOS INICIAIS ---
+const INITIAL_CATEGORIES = [
+    { id: 'c1', name: 'Moradia', icon: 'Home', type: 'saida', color: 'text-rose-400' },
+    { id: 'c2', name: 'Mercado', icon: 'ShoppingCart', type: 'saida', color: 'text-orange-400' },
+    { id: 'c3', name: 'Transporte', icon: 'Car', type: 'saida', color: 'text-blue-400' },
+    { id: 'c4', name: 'Lazer', icon: 'Smile', type: 'saida', color: 'text-purple-400' },
+    { id: 'c5', name: 'Salário', icon: 'Briefcase', type: 'entrada', color: 'text-emerald-400' },
+    { id: 'c6', name: 'Freelance', icon: 'Zap', type: 'entrada', color: 'text-yellow-400' },
+];
+
+const INITIAL_ACCOUNTS = [
+    { id: 'a1', name: 'Nubank', type: 'conta', balance: 4250.00, bank: 'NuBank' },
+    { id: 'a2', name: 'XP Visa Infinite', type: 'cartao', balance: 1250.00, limit: 15000, dueDate: 10, bank: 'XP' },
+];
+
+const INITIAL_TRANSACTIONS = [
+    { id: 't1', description: 'Salário Mensal', amount: 8500, date: '2025-11-05', type: 'entrada', categoryId: 'c5' },
+    { id: 't2', description: 'Aluguel Apartamento', amount: 2800, date: '2025-11-10', type: 'saida', categoryId: 'c1' },
+    { id: 't3', description: 'Supermercado Semanal', amount: 640, date: '2025-11-12', type: 'saida', categoryId: 'c2' },
+    { id: 't4', description: 'Uber', amount: 45, date: '2025-11-14', type: 'saida', categoryId: 'c3' },
+    { id: 't5', description: 'Projeto UI Design', amount: 1200, date: '2025-11-15', type: 'entrada', categoryId: 'c6' },
+];
+
+const INITIAL_GOALS = [
+    { id: 'g1', name: 'Reserva Emergência', targetAmount: 20000, currentAmount: 5000, icon: 'ShieldCheck' },
+    { id: 'g2', name: 'MacBook Pro', targetAmount: 14000, currentAmount: 2500, icon: 'Zap' },
+];
+
+// --- TELAS DO APP ---
+
+// 1. DASHBOARD (BENTO GRID)
+const Dashboard = ({ transactions, categories, goals, accounts, onNavigate }) => {
+    const summary = useMemo(() => {
+        const entradas = transactions.filter(t => t.type === 'entrada').reduce((acc, t) => acc + t.amount, 0);
+        const saidas = transactions.filter(t => t.type === 'saida').reduce((acc, t) => acc + t.amount, 0);
+        const guardado = goals.reduce((acc, g) => acc + g.currentAmount, 0);
+        const disponivel = entradas - saidas - guardado;
+        return { entradas, saidas, disponivel, guardado };
+    }, [transactions, goals]);
+
+    return (
+        <div className="space-y-6 animate-[fadeIn_0.5s_ease-out]">
+            {/* Hero Header */}
+            <div className="flex items-center justify-between mb-2">
+                <div>
+                    <h1 className="text-2xl font-bold text-white tracking-tight">Olá, Usuário 👋</h1>
+                    <p className="text-slate-400 text-sm">Resumo financeiro de hoje</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-600 p-[2px]">
+                    <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden">
+                        <User className="text-white w-5 h-5" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Balance Card - Glassmorphic Hero */}
+            <div className="relative w-full h-48 rounded-[2rem] overflow-hidden p-6 flex flex-col justify-between shadow-2xl shadow-blue-900/20 group">
+                {/* Background Effects */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-700 to-violet-800" />
+                <div className="absolute -top-20 -right-20 w-64 h-64 bg-cyan-500/30 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/40 to-transparent" />
+
+                <div className="relative z-10">
+                    <p className="text-blue-100 font-medium text-sm flex items-center gap-2">
+                        <Wallet className="w-4 h-4" /> Saldo Disponível
+                    </p>
+                    <h2 className="text-4xl font-bold text-white mt-1 tracking-tight">
+                        {formatCurrency(summary.disponivel)}
+                    </h2>
+                </div>
+
+                <div className="relative z-10 flex items-center gap-4">
+                    <div className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center gap-2 text-xs text-blue-100">
+                        <ShieldCheck className="w-3 h-3" />
+                        {formatCurrency(summary.guardado)} em reservas
+                    </div>
+                </div>
+            </div>
+
+            {/* Quick Stats (Bento) */}
+            <div className="grid grid-cols-2 gap-4">
+                <NeoCard onClick={() => onNavigate('movimentacao', { initialFilter: 'entrada' })}>
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 rounded-full bg-emerald-500/10 text-emerald-400">
+                            <ArrowUpRight className="w-5 h-5" />
+                        </div>
+                        <span className="text-slate-400 text-sm font-medium">Entradas</span>
+                    </div>
+                    <p className="text-xl font-bold text-white">{formatCurrency(summary.entradas)}</p>
+                </NeoCard>
+
+                <NeoCard onClick={() => onNavigate('movimentacao', { initialFilter: 'saida' })}>
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 rounded-full bg-rose-500/10 text-rose-400">
+                            <ArrowDownLeft className="w-5 h-5" />
+                        </div>
+                        <span className="text-slate-400 text-sm font-medium">Saídas</span>
+                    </div>
+                    <p className="text-xl font-bold text-white">{formatCurrency(summary.saidas)}</p>
+                </NeoCard>
+            </div>
+
+            {/* Mini Cartão de Crédito Preview */}
+            <div className="flex items-center justify-between mt-2">
+                <h3 className="text-lg font-bold text-white">Meus Cartões</h3>
+                <button onClick={() => onNavigate('configuracao')} className="text-xs text-blue-400 hover:text-blue-300">Ver todos</button>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 custom-scrollbar snap-x">
+                {accounts.filter(a => a.type === 'cartao').map(card => {
+                    const percentage = (card.balance / card.limit) * 100;
+                    return (
+                        <div key={card.id} className="snap-center shrink-0 w-72 h-44 bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-5 border border-slate-700/50 relative overflow-hidden flex flex-col justify-between">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-10 translate-x-10" />
+
+                            <div className="flex justify-between items-start z-10">
+                                <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                                    <CardIcon className="w-5 h-5 text-white" />
+                                </div>
+                                <span className="text-xs font-mono text-slate-400">**** 8842</span>
+                            </div>
+
+                            <div className="z-10">
+                                <p className="text-slate-400 text-xs mb-1">Fatura Atual</p>
+                                <p className="text-2xl font-bold text-white">{formatCurrency(card.balance)}</p>
+
+                                <div className="w-full h-1.5 bg-slate-700 rounded-full mt-3 overflow-hidden">
+                                    <div className={`h-full rounded-full ${percentage > 80 ? 'bg-rose-500' : 'bg-blue-500'}`} style={{ width: `${percentage}%` }} />
+                                </div>
+                                <div className="flex justify-between mt-1.5">
+                                    <span className="text-[10px] text-slate-500">Disp: {formatCurrency(card.limit - card.balance)}</span>
+                                    <span className="text-[10px] text-slate-500">Venc: {card.dueDate}/11</span>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* Recent Transactions List */}
+            <div>
+                <h3 className="text-lg font-bold text-white mb-4">Últimas Movimentações</h3>
+                <div className="space-y-3">
+                    {transactions.slice(0, 5).map(t => {
+                        const cat = categories.find(c => c.id === t.categoryId) || {};
+                        return (
+                            <div key={t.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/50 border border-slate-800 hover:bg-slate-800 transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-slate-800 ${t.type === 'entrada' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                        <IconRender name={cat.icon} className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-white font-medium text-sm">{t.description}</p>
+                                        <p className="text-slate-500 text-xs">{cat.name} • {formatDate(t.date)}</p>
+                                    </div>
+                                </div>
+                                <p className={`font-semibold text-sm ${t.type === 'entrada' ? 'text-emerald-400' : 'text-white'}`}>
+                                    {t.type === 'saida' && '- '}
+                                    {formatCurrency(t.amount)}
+                                </p>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// 2. MOVIMENTAÇÕES (FILTROS MODERNOS)
+const TransactionsScreen = ({ transactions, categories, onAddTransaction, initialFilter = 'todos' }) => {
+    const [showModal, setShowModal] = useState(false);
+    const [filter, setFilter] = useState(initialFilter);
+    const [dateRange, setDateRange] = useState({ start: '', end: '' });
+
+    const filtered = useMemo(() => {
+        return transactions.filter(t => {
+            if (filter !== 'todos' && t.type !== filter) return false;
+            if (dateRange.start && new Date(t.date) < new Date(dateRange.start)) return false;
+            if (dateRange.end && new Date(t.date) > new Date(dateRange.end)) return false;
+            return true;
+        }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    }, [transactions, filter, dateRange]);
+
+    return (
+        <div className="space-y-6 pt-2 pb-24 animate-[fadeIn_0.5s_ease-out]">
+            <header className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold text-white">Extrato</h1>
+                <NeoButton variant="ghost" className="!p-2 !rounded-full"><Search className="w-5 h-5" /></NeoButton>
+            </header>
+
+            {/* Filtros em Pílulas */}
+            <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                {['todos', 'entrada', 'saida'].map(f => (
+                    <button
+                        key={f}
+                        onClick={() => setFilter(f)}
+                        className={`
+              px-5 py-2 rounded-full text-xs font-semibold capitalize transition-all whitespace-nowrap
+              ${filter === f
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50'
+                                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'}
+            `}
+                    >
+                        {f === 'entrada' ? 'Receitas' : f === 'saida' ? 'Despesas' : 'Tudo'}
+                    </button>
+                ))}
+
+                {/* Date Trigger */}
+                <div className="h-6 w-[1px] bg-slate-800 mx-1" />
+
+                <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-full px-3 py-1.5">
+                    <CalendarIcon className="w-3 h-3 text-slate-500" />
+                    <input
+                        type="date"
+                        className="bg-transparent text-xs text-slate-400 outline-none w-20"
+                        onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                    />
+                </div>
+            </div>
+
+            {/* Lista Agrupada */}
+            <div className="space-y-6">
+                {filtered.length === 0 && (
+                    <div className="text-center py-20 opacity-50">
+                        <div className="w-20 h-20 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Search className="w-8 h-8 text-slate-500" />
+                        </div>
+                        <p className="text-slate-400">Nenhuma transação encontrada.</p>
+                    </div>
+                )}
+
+                {/* Render logic grouped by date would go here, simplified for this demo */}
+                {filtered.map(t => {
+                    const cat = categories.find(c => c.id === t.categoryId) || {};
+                    return (
+                        <NeoCard key={t.id} className="!p-4 flex items-center justify-between group hover:border-blue-500/30">
+                            <div className="flex items-center gap-4">
+                                <div className={`
+                  w-12 h-12 rounded-2xl flex items-center justify-center text-lg shadow-lg
+                  ${t.type === 'entrada' ? 'bg-emerald-500/10 text-emerald-400 shadow-emerald-900/10' : 'bg-rose-500/10 text-rose-400 shadow-rose-900/10'}
+                `}>
+                                    <IconRender name={cat.icon} className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h4 className="text-white font-semibold">{t.description}</h4>
+                                    <p className="text-xs text-slate-500">{formatDate(t.date)} • {cat.name}</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <span className={`block font-bold ${t.type === 'entrada' ? 'text-emerald-400' : 'text-white'}`}>
+                                    {t.type === 'saida' ? '-' : '+'} {formatCurrency(t.amount)}
+                                </span>
+                            </div>
+                        </NeoCard>
+                    )
+                })}
+            </div>
+
+            <FloatingActionButton onClick={() => setShowModal(true)} />
+
+            {showModal && (
+                <ModalOverlay onClose={() => setShowModal(false)} title="Nova Transação">
+                    <AddTransactionForm
+                        categories={categories}
+                        onClose={() => setShowModal(false)}
+                        onAdd={onAddTransaction}
+                    />
+                </ModalOverlay>
+            )}
+        </div>
+    );
+};
+
+const AddTransactionForm = ({ categories, onClose, onAdd }) => {
+    const [type, setType] = useState('saida');
+    const [formData, setFormData] = useState({ description: '', amount: '', date: getTodayDate(), categoryId: '' });
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!formData.description || !formData.amount || !formData.categoryId) return;
+        onAdd({ ...formData, id: crypto.randomUUID(), amount: parseFloat(formData.amount), type });
+        onClose();
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="flex p-1 bg-slate-950 rounded-xl border border-slate-800">
+                <button type="button" onClick={() => setType('saida')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${type === 'saida' ? 'bg-rose-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>Despesa</button>
+                <button type="button" onClick={() => setType('entrada')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${type === 'entrada' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>Receita</button>
+            </div>
+
+            <div className="text-center py-4">
+                <label className="text-xs text-slate-500 uppercase tracking-widest">Valor da Transação</label>
+                <div className="flex items-center justify-center gap-1 mt-2">
+                    <span className="text-2xl text-slate-500">R$</span>
+                    <input
+                        type="number"
+                        placeholder="0,00"
+                        autoFocus
+                        className="bg-transparent text-4xl font-bold text-white placeholder-slate-700 outline-none w-40 text-center"
+                        value={formData.amount}
+                        onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                    />
+                </div>
+            </div>
+
+            <NeoInput label="Descrição" id="desc" placeholder="Ex: Jantar com amigos" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+
+            <div className="grid grid-cols-2 gap-4">
+                <NeoInput label="Data" id="date" type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
+                <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 ml-1">Categoria</label>
+                    <div className="relative">
+                        <select
+                            className="w-full bg-slate-950/50 border border-slate-800 text-slate-100 rounded-xl px-4 py-3.5 appearance-none outline-none focus:border-blue-500"
+                            value={formData.categoryId}
+                            onChange={e => setFormData({ ...formData, categoryId: e.target.value })}
+                        >
+                            <option value="">Selecione...</option>
+                            {categories.filter(c => c.type === type).map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-4 w-4 h-4 text-slate-500 pointer-events-none" />
+                    </div>
+                </div>
+            </div>
+
+            <NeoButton type="submit" className="w-full py-4 text-lg" variant={type === 'saida' ? 'danger' : 'success'}>
+                Confirmar
+            </NeoButton>
+        </form>
+    );
+};
+
+// 3. METAS (VAULTS)
+const Goals = ({ goals, onUpdateGoal, onAddGoal }) => {
+    const [showModal, setShowModal] = useState(false);
+    const [selectedGoal, setSelectedGoal] = useState(null);
+
+    const handleDeposit = (amount) => {
+        const newAmount = selectedGoal.currentAmount + parseFloat(amount);
+        onUpdateGoal(selectedGoal.id, { currentAmount: newAmount });
+        setSelectedGoal(null);
+    };
+
+    return (
+        <div className="space-y-6 pt-2 pb-24 animate-[fadeIn_0.5s_ease-out]">
+            <header className="flex justify-between items-end">
+                <div>
+                    <h1 className="text-2xl font-bold text-white">Metas & Sonhos</h1>
+                    <p className="text-slate-400 text-sm mt-1">Seu dinheiro, separado e rendendo.</p>
+                </div>
+                <NeoButton onClick={() => setShowModal(true)} variant="primary" className="!p-2 rounded-full"><Plus /></NeoButton>
+            </header>
+
+            <div className="grid gap-4">
+                {goals.map(goal => {
+                    const percent = Math.min(100, (goal.currentAmount / goal.targetAmount) * 100);
+                    return (
+                        <NeoCard key={goal.id} onClick={() => setSelectedGoal(goal)} className="group relative overflow-hidden">
+                            {/* Progress Background */}
+                            <div className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-1000" style={{ width: `${percent}%` }} />
+
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                                        <IconRender name={goal.icon} className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-white text-lg">{goal.name}</h3>
+                                        <p className="text-slate-400 text-xs">Alvo: {formatCurrency(goal.targetAmount)}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-slate-950/50 px-3 py-1 rounded-full border border-slate-800 text-xs font-mono text-blue-400">
+                                    {percent.toFixed(0)}%
+                                </div>
+                            </div>
+
+                            <div className="flex items-end justify-between">
+                                <div>
+                                    <p className="text-slate-500 text-xs mb-1">Guardado Atual</p>
+                                    <p className="text-2xl font-bold text-white">{formatCurrency(goal.currentAmount)}</p>
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                    {/* Correção: Usando ArrowLeftRight que está importado */}
+                                    <ArrowLeftRight className="w-4 h-4" />
+                                </div>
+                            </div>
+                        </NeoCard>
+                    );
+                })}
+            </div>
+
+            {showModal && (
+                <ModalOverlay title="Nova Meta" onClose={() => setShowModal(false)}>
+                    <AddGoalForm onAdd={onAddGoal} onClose={() => setShowModal(false)} />
+                </ModalOverlay>
+            )}
+
+            {selectedGoal && (
+                <ModalOverlay title={selectedGoal.name} onClose={() => setSelectedGoal(null)}>
+                    <ManageGoalForm goal={selectedGoal} onProcess={handleDeposit} />
+                </ModalOverlay>
+            )}
+        </div>
+    );
+};
+
+const AddGoalForm = ({ onAdd, onClose }) => {
+    const [data, setData] = useState({ name: '', target: '', initial: '' });
+    return (
+        <form onSubmit={(e) => {
+            e.preventDefault();
+            onAdd({ id: crypto.randomUUID(), name: data.name, targetAmount: parseFloat(data.target), currentAmount: parseFloat(data.initial || 0), icon: 'Target' });
+            onClose();
+        }} className="space-y-4">
+            <NeoInput label="Nome da Meta" id="gName" value={data.name} onChange={e => setData({ ...data, name: e.target.value })} />
+            <NeoInput label="Valor Alvo" id="gTarget" type="number" value={data.target} onChange={e => setData({ ...data, target: e.target.value })} />
+            <NeoInput label="Depósito Inicial (Opcional)" id="gInit" type="number" value={data.initial} onChange={e => setData({ ...data, initial: e.target.value })} />
+            <NeoButton className="w-full" type="submit">Criar Caixinha</NeoButton>
+        </form>
+    )
+}
+
+const ManageGoalForm = ({ goal, onProcess }) => {
+    const [amount, setAmount] = useState('');
+    const [mode, setMode] = useState('add'); // add | remove
+
+    return (
+        <div className="space-y-6">
+            <div className="text-center">
+                <p className="text-slate-400 text-sm">Saldo na caixinha</p>
+                <h2 className="text-3xl font-bold text-white">{formatCurrency(goal.currentAmount)}</h2>
+            </div>
+
+            <div className="flex p-1 bg-slate-950 rounded-xl border border-slate-800">
+                <button onClick={() => setMode('add')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'add' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>Guardar</button>
+                <button onClick={() => setMode('remove')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'remove' ? 'bg-slate-700 text-white' : 'text-slate-400'}`}>Resgatar</button>
+            </div>
+
+            <div className="space-y-4">
+                <NeoInput
+                    label="Valor"
+                    id="mAmount"
+                    type="number"
+                    placeholder="0,00"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    autoFocus
+                />
+                <NeoButton
+                    className="w-full"
+                    onClick={() => onProcess(mode === 'add' ? amount : -amount)}
+                    variant={mode === 'add' ? 'primary' : 'ghost'}
+                >
+                    {mode === 'add' ? 'Confirmar Depósito' : 'Confirmar Resgate'}
+                </NeoButton>
+            </div>
+        </div>
+    )
+}
+
+// 4. LISTA DE COMPRAS (INTELIGENTE)
+const ShoppingList = ({ list, onAdd, onUpdate, onDelete, onClear }) => {
+    const [newItem, setNewItem] = useState({ name: '', price: '' });
+    const stats = useMemo(() => {
+        const total = list.reduce((acc, i) => acc + i.expectedPrice, 0);
+        const paid = list.filter(i => i.purchased).reduce((acc, i) => acc + i.actualPrice, 0);
+        const expectedPaid = list.filter(i => i.purchased).reduce((acc, i) => acc + i.expectedPrice, 0);
+        const diff = paid - expectedPaid;
+        return { total, paid, diff };
+    }, [list]);
+
+    const addItem = (e) => {
+        e.preventDefault();
+        if (!newItem.name) return;
+        onAdd({ id: crypto.randomUUID(), name: newItem.name, expectedPrice: parseFloat(newItem.price || 0), actualPrice: 0, purchased: false });
+        setNewItem({ name: '', price: '' });
+    }
+
+    return (
+        <div className="space-y-6 pt-2 pb-24 animate-[fadeIn_0.5s_ease-out]">
+            <header>
+                <h1 className="text-2xl font-bold text-white">Mercado</h1>
+            </header>
+
+            {/* Summary Card */}
+            <NeoCard className="flex justify-between items-center bg-gradient-to-r from-slate-900 to-slate-800">
+                <div>
+                    <p className="text-slate-400 text-xs">Previsto Total</p>
+                    <p className="text-xl font-bold text-white">{formatCurrency(stats.total)}</p>
+                </div>
+                <div className="text-right">
+                    <p className="text-slate-400 text-xs">Gasto Real</p>
+                    <p className="text-xl font-bold text-emerald-400">{formatCurrency(stats.paid)}</p>
+                </div>
+                <div className={`text-right px-3 py-1 rounded-lg ${stats.diff > 0 ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                    <p className="text-[10px] font-bold uppercase">Diferença</p>
+                    <p className="font-bold text-sm">{stats.diff > 0 ? '+' : ''}{formatCurrency(stats.diff)}</p>
+                </div>
+            </NeoCard>
+
+            {/* Add Input */}
+            <form onSubmit={addItem} className="flex gap-2">
+                <div className="flex-1">
+                    <NeoInput id="prod" placeholder="Adicionar produto..." value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} label="Item" />
+                </div>
+                <div className="w-24">
+                    <NeoInput id="price" type="number" placeholder="R$" value={newItem.price} onChange={e => setNewItem({ ...newItem, price: e.target.value })} label="Preço" />
+                </div>
+                <NeoButton type="submit" className="!px-3 mt-6 rounded-xl self-start h-[50px]"><Plus /></NeoButton>
+            </form>
+
+            {/* List */}
+            <div className="space-y-2">
+                {list.map(item => (
+                    <div key={item.id} className={`group flex items-center gap-3 p-3 rounded-xl border transition-all ${item.purchased ? 'bg-slate-900/30 border-slate-800 opacity-60' : 'bg-slate-900 border-slate-700 hover:border-blue-500/50'}`}>
+                        <button
+                            onClick={() => onUpdate(item.id, { purchased: !item.purchased, actualPrice: item.purchased ? 0 : item.expectedPrice })}
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${item.purchased ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-500 hover:border-blue-400'}`}
+                        >
+                            {item.purchased && <Check className="w-3 h-3" />}
+                        </button>
+
+                        <div className="flex-1">
+                            <p className={`font-medium text-sm ${item.purchased ? 'text-slate-500 line-through' : 'text-slate-200'}`}>{item.name}</p>
+                            <p className="text-xs text-slate-500">Est: {formatCurrency(item.expectedPrice)}</p>
+                        </div>
+
+                        {item.purchased ? (
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-500">Pago:</span>
+                                <input
+                                    type="number"
+                                    className="w-20 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-sm text-emerald-400 text-right outline-none focus:border-emerald-500"
+                                    value={item.actualPrice}
+                                    onChange={(e) => onUpdate(item.id, { actualPrice: parseFloat(e.target.value) })}
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            </div>
+                        ) : (
+                            <button onClick={() => onDelete(item.id)} className="p-2 text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            {list.some(i => i.purchased) && (
+                <div className="flex justify-center">
+                    <button onClick={onClear} className="text-xs text-slate-500 hover:text-rose-400 underline decoration-dashed">Limpar itens comprados</button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// 5. AJUSTES & CONTAS
+const SettingsScreen = ({ accounts, onAddAccount }) => {
+    const [showAccountModal, setShowAccountModal] = useState(false);
+
+    return (
+        <div className="space-y-6 pt-2 animate-[fadeIn_0.5s_ease-out]">
+            <h1 className="text-2xl font-bold text-white">Ajustes</h1>
+
+            <div className="flex items-center gap-4 p-4 bg-slate-900 rounded-3xl border border-slate-800">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-2xl font-bold text-white">
+                    JP
+                </div>
+                <div>
+                    <h3 className="text-white font-bold text-lg">João Pedro</h3>
+                    <p className="text-slate-400 text-xs">Premium Member</p>
+                </div>
+                <div className="ml-auto">
+                    <NeoButton variant="ghost" className="!p-2 rounded-full"><Settings className="w-5 h-5" /></NeoButton>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <p className="text-xs font-bold text-slate-500 uppercase ml-2 tracking-widest">Financeiro</p>
+                <NeoCard onClick={() => setShowAccountModal(true)} className="flex items-center justify-between group">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><CreditCard className="w-5 h-5" /></div>
+                        <span className="text-white font-medium">Contas & Cartões</span>
+                    </div>
+                    <ChevronRight className="text-slate-600" />
+                </NeoCard>
+                <NeoCard className="flex items-center justify-between group">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-500/10 text-purple-400 rounded-lg"><Tags className="w-5 h-5" /></div>
+                        <span className="text-white font-medium">Categorias</span>
+                    </div>
+                    <ChevronRight className="text-slate-600" />
+                </NeoCard>
+            </div>
+
+            <div className="space-y-2">
+                <p className="text-xs font-bold text-slate-500 uppercase ml-2 tracking-widest">App</p>
+                <NeoCard className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-yellow-500/10 text-yellow-400 rounded-lg"><Moon className="w-5 h-5" /></div>
+                        <span className="text-white font-medium">Tema Escuro</span>
+                    </div>
+                    <div className="w-10 h-6 bg-blue-600 rounded-full relative cursor-pointer">
+                        <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                    </div>
+                </NeoCard>
+            </div>
+
+            {showAccountModal && (
+                <ModalOverlay title="Gerenciar Contas" onClose={() => setShowAccountModal(false)}>
+                    <div className="space-y-4">
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            // Simplificado para demo
+                            onAddAccount({ id: crypto.randomUUID(), name: 'Nova Conta', type: 'conta', balance: 0, bank: 'NuBank' });
+                            setShowAccountModal(false);
+                        }} className="space-y-4">
+                            <NeoInput label="Nome" id="accName" placeholder="Ex: Nubank" />
+                            <NeoInput label="Saldo Inicial" id="accBal" type="number" />
+                            <NeoButton className="w-full" type="submit">Adicionar Conta</NeoButton>
+                        </form>
+
+                        <div className="border-t border-slate-800 pt-4">
+                            <h3 className="text-white font-bold mb-2">Contas Existentes</h3>
+                            {accounts.map(acc => (
+                                <div key={acc.id} className="flex justify-between p-3 bg-slate-950 rounded-xl mb-2">
+                                    <span className="text-slate-300">{acc.name}</span>
+                                    <span className="text-white font-mono">{formatCurrency(acc.balance)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </ModalOverlay>
+            )}
+        </div>
+    )
+}
+
+// --- BARRA DE NAVEGAÇÃO FLUTUANTE ---
+const FloatingNav = ({ current, onChange }) => {
+    const items = [
+        { id: 'dashboard', icon: LayoutGrid },
+        { id: 'movimentacao', icon: ArrowLeftRight },
+        { id: 'metas', icon: Target },
+        { id: 'lista', icon: ListChecks },
+        { id: 'configuracao', icon: User },
+    ];
+
+    return (
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
+            <div className="
+        flex items-center gap-1 p-2 rounded-full 
+        bg-slate-900/80 backdrop-blur-xl border border-white/10 
+        shadow-2xl shadow-black/50
+      ">
+                {items.map(item => {
+                    const isActive = current === item.id;
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => onChange(item.id)}
+                            className={`
+                relative w-12 h-12 rounded-full flex items-center justify-center 
+                transition-all duration-300
+                ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 -translate-y-1' : 'text-slate-400 hover:text-white hover:bg-white/5'}
+              `}
+                        >
+                            <item.icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-110' : ''}`} />
+                            {isActive && <span className="absolute -bottom-2 w-1 h-1 bg-blue-400 rounded-full" />}
+                        </button>
+                    )
+                })}
+            </div>
+        </nav>
+    );
+};
+
+// --- APP CORE ---
+export default function App() {
+    const [page, setPage] = useState('dashboard');
+    const [pageProps, setPageProps] = useState({});
+
+    const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
+    const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+    const [goals, setGoals] = useState(INITIAL_GOALS);
+    const [shoppingList, setShoppingList] = useState([]);
+    const [accounts, setAccounts] = useState(INITIAL_ACCOUNTS);
+
+    const handleNavigate = (newPage, props = {}) => {
+        setPage(newPage);
+        setPageProps(props);
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-blue-500/30 selection:text-blue-200 overflow-x-hidden">
+            {/* Background ambient glow */}
+            <div className="fixed top-0 left-0 w-screen h-screen overflow-hidden pointer-events-none z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-blue-900/20 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-violet-900/20 rounded-full blur-[120px]" />
+            </div>
+
+            <main className="relative z-10 max-w-md mx-auto p-6 min-h-screen">
+                {page === 'dashboard' && <Dashboard transactions={transactions} categories={categories} goals={goals} accounts={accounts} onNavigate={handleNavigate} />}
+                {page === 'movimentacao' && <TransactionsScreen transactions={transactions} categories={categories} onAddTransaction={t => setTransactions([t, ...transactions])} {...pageProps} />}
+                {page === 'metas' && <Goals goals={goals} onAddGoal={g => setGoals([g, ...goals])} onUpdateGoal={(id, u) => setGoals(goals.map(g => g.id === id ? { ...g, ...u } : g))} />}
+                {page === 'lista' && <ShoppingList list={shoppingList} onAdd={i => setShoppingList([i, ...shoppingList])} onUpdate={(id, u) => setShoppingList(shoppingList.map(i => i.id === id ? { ...i, ...u } : i))} onDelete={id => setShoppingList(shoppingList.filter(i => i.id !== id))} onClear={() => setShoppingList(shoppingList.filter(i => !i.purchased))} />}
+                {page === 'configuracao' && <SettingsScreen accounts={accounts} onAddAccount={a => setAccounts([...accounts, a])} />}
+            </main>
+
+            <FloatingNav current={page} onChange={p => handleNavigate(p)} />
+
+            {/* Global Styles for scrollbar */}
+            <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        @keyframes shimmer { 100% { transform: translateX(100%); } }
+        @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+        </div>
+    );
+}
