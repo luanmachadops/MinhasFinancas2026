@@ -28,31 +28,47 @@ export const useSyncData = (tableName, initialData = []) => {
         if (!user || !navigator.onLine) return;
 
         setIsSyncing(true);
+
+        // Check if there are pending items in the queue - don't overwrite if there are
+        const queueKey = `sync_queue_${tableName}`;
+        const pendingQueue = JSON.parse(localStorage.getItem(queueKey) || '[]');
+
         const { data: serverData, error } = await supabase
             .from(tableName)
             .select('*')
             .order('created_at', { ascending: false });
 
         if (!error && serverData) {
+            // Get current local data
+            const currentLocalData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+            // Find local items that are pending sync (exist locally but not on server)
+            const serverIds = new Set(serverData.map(item => item.id));
+
+            // Items that are in local but not in server AND have pending queue entries
+            const pendingInserts = pendingQueue
+                .filter(q => q.type === 'INSERT')
+                .map(q => q.payload.id);
+
+            const localOnlyItems = currentLocalData.filter(localItem =>
+                !serverIds.has(localItem.id) && pendingInserts.includes(localItem.id)
+            );
+
             // Para categorias: merge inicial para garantir que padrões sempre existam
-            // Usando refs para evitar loop infinito
             const currentInitialData = initialDataRef.current;
 
             if (tableName === 'categories' && currentInitialData.length > 0 && !hasSeededRef.current) {
-                // Encontrar categorias padrão que não existem no servidor
-                const serverIds = serverData.map(c => c.id);
                 const serverNames = serverData.map(c => c.name.toLowerCase());
 
                 const missingDefaults = currentInitialData.filter(defaultCat =>
-                    !serverIds.includes(defaultCat.id) &&
+                    !serverIds.has(defaultCat.id) &&
                     !serverNames.includes(defaultCat.name.toLowerCase())
                 );
 
                 if (missingDefaults.length > 0) {
-                    hasSeededRef.current = true; // Marcar que já fez seed
+                    hasSeededRef.current = true;
                     console.log(`Seeding ${missingDefaults.length} default categories...`);
 
-                    // Gerar UUIDs válidos para cada categoria
                     const categoriesWithUserId = missingDefaults.map(cat => ({
                         id: crypto.randomUUID(),
                         name: cat.name,
@@ -68,21 +84,27 @@ export const useSyncData = (tableName, initialData = []) => {
                         .insert(categoriesWithUserId);
 
                     if (!insertError) {
-                        setData([...serverData, ...categoriesWithUserId]);
+                        // Merge: server + seeded + local pending
+                        const mergedData = [...serverData, ...categoriesWithUserId, ...localOnlyItems];
+                        setData(mergedData);
                     } else {
                         console.log('Error seeding categories:', insertError);
-                        setData(serverData);
+                        // Still merge server with local pending
+                        setData([...serverData, ...localOnlyItems]);
                     }
                 } else {
                     hasSeededRef.current = true;
-                    setData(serverData);
+                    // Merge server with local pending
+                    setData([...serverData, ...localOnlyItems]);
                 }
             } else {
-                setData(serverData);
+                // Merge server data with local pending items
+                const mergedData = [...serverData, ...localOnlyItems];
+                setData(mergedData);
             }
         }
         setIsSyncing(false);
-    }, [user, tableName]); // Removido initialData das dependências!
+    }, [user, tableName, STORAGE_KEY]);
 
     // Initial Fetch
     useEffect(() => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Plus, Trash2, Check, X, Shield, Mail, UserCheck } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Check, X, Shield, Mail, UserCheck, RefreshCw } from 'lucide-react';
 import { NeoButton, NeoCard, NeoInput, ModalOverlay } from '../../components/ui';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,6 +12,7 @@ export const SharedAccessScreen = ({ onBack }) => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedInvite, setSelectedInvite] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [syncing, setSyncing] = useState(false);
 
     const fetchInvites = async () => {
         try {
@@ -23,24 +24,19 @@ export const SharedAccessScreen = ({ onBack }) => {
                 .eq('owner_id', user.id);
             setInvitesSent(sent || []);
 
-            // Fetch invites received (using email match done by RLS)
-            const { data: received } = await supabase
-                .from('shared_access')
-                .select('*, owner:owner_id(email)') // Keep it simple first
-            //.eq('guest_email', user.email) // RLS handles this actually
-
-            // Wait, RLS for SELECT uses guest_email match.
-            // But if I select *, I should see them.
-            // However, RLS for 'owner:owner_id(email)' join might fail if I can't see owner users.
-            // Let's just select * first.
-
+            // Fetch invites received - try to get owner info if available
             const { data: receivedRaw, error } = await supabase
                 .from('shared_access')
                 .select('*')
                 .eq('guest_email', user.email);
 
             if (receivedRaw) {
-                setInvitesReceived(receivedRaw);
+                // Try to enrich with owner name from our stored data or metadata
+                const enrichedInvites = receivedRaw.map(invite => ({
+                    ...invite,
+                    ownerDisplayName: invite.owner_name || invite.owner_email?.split('@')[0] || invite.owner_id.slice(0, 8)
+                }));
+                setInvitesReceived(enrichedInvites);
             }
 
         } catch (error) {
@@ -64,6 +60,9 @@ export const SharedAccessScreen = ({ onBack }) => {
 
         const { error } = await supabase.from('shared_access').insert({
             owner_id: user.id,
+            owner_name: user.user_metadata?.name || user.email?.split('@')[0],
+            owner_email: user.email,
+            owner_avatar: user.user_metadata?.avatar_url || null,
             guest_email: email.toLowerCase().trim(),
             permissions: { read: true, write: canWrite }
         });
@@ -123,6 +122,36 @@ export const SharedAccessScreen = ({ onBack }) => {
         }
     };
 
+    const handleSyncProfile = async () => {
+        try {
+            setSyncing(true);
+            const updates = {
+                owner_name: user?.user_metadata?.name || user?.email?.split('@')[0],
+                owner_email: user?.email,
+                owner_avatar: user?.user_metadata?.avatar_url || null
+            };
+
+            // We update all invites where I am the owner
+            const { error } = await supabase
+                .from('shared_access')
+                .update(updates)
+                .eq('owner_id', user.id);
+
+            if (error) {
+                // If error is about missing column, ignore/alert
+                console.error(error);
+                alert('Erro ao sincronizar. Certifique-se de executar o SQL de atualização no Supabase.');
+            } else {
+                alert('Perfil sincronizado com sucesso nos convites!');
+                fetchInvites();
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setSyncing(false);
+        }
+    };
+
     return (
         <div className="space-y-6 pt-2 h-full animate-[fadeIn_0.5s_ease-out]">
             <header className="flex items-center gap-4">
@@ -141,7 +170,7 @@ export const SharedAccessScreen = ({ onBack }) => {
                             <div className="flex justify-between items-center">
                                 <div>
                                     <p className="text-white font-medium text-sm">Convite de Acesso</p>
-                                    <p className="text-slate-400 text-xs">Proprietário ID: {invite.owner_id.slice(0, 8)}...</p>
+                                    <p className="text-slate-400 text-xs">De: {invite.ownerDisplayName || invite.owner_id.slice(0, 8)}</p>
                                     <div className="flex gap-2 mt-1">
                                         <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300">
                                             {invite.permissions.write ? 'Leitura + Escrita' : 'Somente Leitura'}
@@ -164,64 +193,70 @@ export const SharedAccessScreen = ({ onBack }) => {
                 </div>
             )}
 
-            {/* Sent Invites - Only visible if I am NOT a guest */}
-            {invitesReceived.some(i => i.status === 'accepted') ? (
-                <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800/50 text-center">
-                    <Shield className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                    <p className="text-slate-400 text-sm font-medium">Conta Convidada</p>
-                    <p className="text-slate-500 text-xs mt-1">Como esta conta acessa dados compartilhados, ela não pode convidar outros usuários.</p>
-                </div>
-            ) : (
-                <div className="space-y-4">
-                    <div className="flex justify-between items-end px-2">
-                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Meus Compartilhamentos</h3>
+            {/* Sent Invites - Share YOUR OWN data */}
+            <div className="space-y-4">
+                <div className="flex justify-between items-end px-2">
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Meus Compartilhamentos</h3>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleSyncProfile}
+                            disabled={syncing}
+                            className={`text-slate-400 text-xs flex items-center gap-1 hover:text-white transition-colors ${syncing ? 'opacity-50' : ''}`}
+                            title="Atualizar seu nome/foto nos convites enviados"
+                        >
+                            <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} /> Sincronizar Perfil
+                        </button>
                         <button onClick={() => setShowInviteModal(true)} className="text-blue-400 text-xs flex items-center gap-1 hover:text-blue-300">
                             <Plus className="w-3 h-3" /> Convidar
                         </button>
                     </div>
-
-                    {invitesSent.length === 0 ? (
-                        <div className="text-center py-8 bg-slate-900/50 rounded-2xl border border-slate-800/50">
-                            <UserCheck className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                            <p className="text-slate-500 text-sm">Ninguém tem acesso aos seus dados.</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {invitesSent.map(invite => (
-                                <NeoCard key={invite.id} className="flex items-center justify-between group">
-                                    <div
-                                        onClick={() => {
-                                            setSelectedInvite(invite);
-                                            setShowEditModal(true);
-                                        }}
-                                        className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <Mail className="w-3 h-3 text-slate-500" />
-                                            <p className="text-white text-sm font-medium">{invite.guest_email}</p>
-                                        </div>
-                                        <div className="flex gap-2 mt-1.5">
-                                            <StatusBadge status={invite.status} />
-                                            <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">
-                                                {invite.permissions.write ? 'Editor' : 'Leitor'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleRemoveAccess(invite.id);
-                                        }}
-                                        className="p-2 text-slate-600 hover:text-rose-500 transition-colors"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </NeoCard>
-                            ))}
-                        </div>
-                    )}
                 </div>
-            )}
+
+                <p className="text-slate-500 text-xs px-2">
+                    Pessoas que têm acesso aos <span className="text-blue-400">seus dados pessoais</span>.
+                </p>
+
+                {invitesSent.length === 0 ? (
+                    <div className="text-center py-8 bg-slate-900/50 rounded-2xl border border-slate-800/50">
+                        <UserCheck className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                        <p className="text-slate-500 text-sm">Ninguém tem acesso aos seus dados.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {invitesSent.map(invite => (
+                            <NeoCard key={invite.id} className="flex items-center justify-between group">
+                                <div
+                                    onClick={() => {
+                                        setSelectedInvite(invite);
+                                        setShowEditModal(true);
+                                    }}
+                                    className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Mail className="w-3 h-3 text-slate-500" />
+                                        <p className="text-white text-sm font-medium">{invite.guest_email}</p>
+                                    </div>
+                                    <div className="flex gap-2 mt-1.5">
+                                        <StatusBadge status={invite.status} />
+                                        <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">
+                                            {invite.permissions.write ? 'Editor' : 'Leitor'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRemoveAccess(invite.id);
+                                    }}
+                                    className="p-2 text-slate-600 hover:text-rose-500 transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </NeoCard>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             {showEditModal && selectedInvite && (
                 <ModalOverlay title="Editar Permissões" onClose={() => {
@@ -240,8 +275,8 @@ export const SharedAccessScreen = ({ onBack }) => {
                             <button
                                 onClick={() => handleUpdatePermissions(false)}
                                 className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${!selectedInvite.permissions.write
-                                        ? 'bg-blue-500/10 border-blue-500'
-                                        : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                                    ? 'bg-blue-500/10 border-blue-500'
+                                    : 'bg-slate-950 border-slate-800 hover:border-slate-700'
                                     }`}
                             >
                                 <div className="p-2 bg-slate-800 rounded-lg">
@@ -257,8 +292,8 @@ export const SharedAccessScreen = ({ onBack }) => {
                             <button
                                 onClick={() => handleUpdatePermissions(true)}
                                 className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${selectedInvite.permissions.write
-                                        ? 'bg-blue-500/10 border-blue-500'
-                                        : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                                    ? 'bg-blue-500/10 border-blue-500'
+                                    : 'bg-slate-950 border-slate-800 hover:border-slate-700'
                                     }`}
                             >
                                 <div className="p-2 bg-blue-500/20 rounded-lg">

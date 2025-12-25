@@ -20,6 +20,11 @@ export const AddTransactionForm = ({
 }) => {
     const { isReadOnly } = useData();
     const [type, setType] = useState(initialType);
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [showAccountModal, setShowAccountModal] = useState(false);
+    const [attachmentPreview, setAttachmentPreview] = useState(null);
+    const fileInputRef = React.useRef(null);
+
     const [formData, setFormData] = useState({
         description: '',
         amount: '',
@@ -29,6 +34,8 @@ export const AddTransactionForm = ({
         notes: '',
         is_paid: true,
         is_recurring: false,
+        is_favorite: false,
+        attachment_url: '',
         payment_method: isCardExpense ? 'cartao_credito' : 'dinheiro'
     });
     const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -69,6 +76,21 @@ export const AddTransactionForm = ({
         }
     };
 
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Create preview URL
+            const previewUrl = URL.createObjectURL(file);
+            setAttachmentPreview(previewUrl);
+            setFormData(prev => ({ ...prev, attachment_url: file.name }));
+        }
+    };
+
+    const handleToggleFavorite = () => {
+        setIsFavorite(!isFavorite);
+        setFormData(prev => ({ ...prev, is_favorite: !isFavorite }));
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!formData.description || !formData.amount) return;
@@ -78,7 +100,7 @@ export const AddTransactionForm = ({
             id: crypto.randomUUID(),
             amount: parseFloat(formData.amount),
             type,
-            // Convert categoryId to category_id for consistency
+            is_favorite: isFavorite,
             category_id: formData.category_id || null
         });
         onClose();
@@ -196,7 +218,13 @@ export const AddTransactionForm = ({
                         value={formData.description}
                         onChange={e => setFormData({ ...formData, description: e.target.value })}
                     />
-                    <Heart className="w-5 h-5 text-slate-600 hover:text-rose-400 cursor-pointer transition-colors" />
+                    <button
+                        type="button"
+                        onClick={handleToggleFavorite}
+                        className="p-1 rounded-full hover:bg-slate-800 transition-colors"
+                    >
+                        <Heart className={`w-5 h-5 transition-colors ${isFavorite ? 'text-rose-500 fill-rose-500' : 'text-slate-600 hover:text-rose-400'}`} />
+                    </button>
                 </div>
 
                 {/* Category Selector */}
@@ -218,89 +246,103 @@ export const AddTransactionForm = ({
                 </button>
 
                 {/* Account Selector */}
-                <button
-                    type="button"
-                    onClick={() => document.getElementById('account-select')?.click()}
-                    className="w-full flex items-center gap-3 p-3 bg-slate-900/30 rounded-xl border border-slate-800 hover:border-slate-700 transition-colors"
-                >
-                    {formData.payment_method === 'cartao_credito' ? (
-                        <CreditCard className="w-5 h-5 text-violet-400" />
-                    ) : (
-                        <Wallet className="w-5 h-5 text-slate-500" />
-                    )}
-                    {selectedAccount ? (
-                        <span className="flex items-center gap-2 px-3 py-1 bg-slate-800 rounded-full">
-                            <span className="text-white text-sm">{selectedAccount.name}</span>
-                            {selectedAccount.bank && <span className="text-slate-500 text-xs">• {selectedAccount.bank}</span>}
-                        </span>
-                    ) : (
-                        <span className="text-slate-500 text-sm">
-                            {formData.payment_method === 'cartao_credito' ? 'Cartão' : 'Conta'}
-                        </span>
-                    )}
-                    <ChevronRight className="w-4 h-4 text-slate-500 ml-auto" />
-                    <select
-                        id="account-select"
-                        className="absolute opacity-0"
-                        value={formData.account_id}
-                        onChange={e => setFormData({ ...formData, account_id: e.target.value })}
+                <div className="relative">
+                    <button
+                        type="button"
+                        onClick={() => setShowAccountModal(!showAccountModal)}
+                        className="w-full flex items-center gap-3 p-3 bg-slate-900/30 rounded-xl border border-slate-800 hover:border-slate-700 transition-colors"
                     >
-                        <option value="">Selecione...</option>
-                        {filteredAccounts.map(a => (
-                            <option key={a.id} value={a.id}>{a.name} {a.bank ? `• ${a.bank}` : ''}</option>
-                        ))}
-                    </select>
-                </button>
+                        <Wallet className="w-5 h-5 text-emerald-400" />
+                        {selectedAccount ? (
+                            <span className="flex items-center gap-2 px-3 py-1 bg-slate-800 rounded-full">
+                                <span className="text-white text-sm">{selectedAccount.name}</span>
+                                {selectedAccount.bank && <span className="text-slate-500 text-xs">• {selectedAccount.bank}</span>}
+                            </span>
+                        ) : (
+                            <span className="text-slate-500 text-sm">Conta</span>
+                        )}
+                        <ChevronRight className="w-4 h-4 text-slate-500 ml-auto" />
+                    </button>
 
-                {/* Anexar */}
-                <div className="flex items-center gap-3 p-3 bg-slate-900/30 rounded-xl border border-slate-800 text-slate-500 cursor-pointer hover:border-slate-700 transition-colors">
-                    <Paperclip className="w-5 h-5" />
-                    <span className="text-sm">Anexar</span>
-                    <div className="ml-auto w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                        <Plus className="w-4 h-4 text-blue-400" />
-                    </div>
-                </div>
-
-                {/* More Details Toggle */}
-                <button
-                    type="button"
-                    onClick={() => setShowMoreDetails(!showMoreDetails)}
-                    className="w-full text-center text-blue-400 text-sm font-medium py-2 hover:text-blue-300 transition-colors"
-                >
-                    {showMoreDetails ? 'MENOS DETALHES' : 'MAIS DETALHES'}
-                </button>
-
-                {/* Extra Fields */}
-                {showMoreDetails && (
-                    <div className="space-y-3 animate-[fadeIn_0.3s_ease-out]">
-                        {/* Recurring Toggle */}
-                        <div className="flex items-center justify-between p-3 bg-slate-900/30 rounded-xl border border-slate-800">
-                            <div className="flex items-center gap-3">
-                                <RotateCcw className="w-5 h-5 text-slate-500" />
-                                <span className="text-slate-300 text-sm">Despesa Fixa</span>
-                            </div>
+                    {/* Account Dropdown */}
+                    {showAccountModal && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto">
                             <button
                                 type="button"
-                                onClick={() => setFormData({ ...formData, is_recurring: !formData.is_recurring })}
-                                className={`w-12 h-6 rounded-full transition-colors ${formData.is_recurring ? 'bg-blue-500' : 'bg-slate-700'}`}
+                                onClick={() => { setFormData(prev => ({ ...prev, account_id: '' })); setShowAccountModal(false); }}
+                                className={`w-full text-left px-4 py-3 text-sm hover:bg-slate-800 transition-colors ${!formData.account_id ? 'text-blue-400' : 'text-slate-400'}`}
                             >
-                                <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform ${formData.is_recurring ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                                Nenhuma conta
                             </button>
+                            {filteredAccounts.map(a => (
+                                <button
+                                    key={a.id}
+                                    type="button"
+                                    onClick={() => { setFormData(prev => ({ ...prev, account_id: a.id })); setShowAccountModal(false); }}
+                                    className={`w-full text-left px-4 py-3 text-sm hover:bg-slate-800 transition-colors border-t border-slate-800 ${formData.account_id === a.id ? 'text-blue-400' : 'text-white'}`}
+                                >
+                                    {a.name} {a.bank && <span className="text-slate-500">• {a.bank}</span>}
+                                </button>
+                            ))}
                         </div>
+                    )}
+                </div>
 
-                        {/* Notes */}
-                        <div className="flex items-start gap-3 p-3 bg-slate-900/30 rounded-xl border border-slate-800">
-                            <FileText className="w-5 h-5 text-slate-500 mt-0.5" />
-                            <textarea
-                                placeholder="Observação"
-                                className="flex-1 bg-transparent text-white placeholder-slate-500 outline-none text-sm resize-none"
-                                rows={2}
-                                value={formData.notes}
-                                onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                            />
-                        </div>
+                {/* Anexar */}
+                <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-3 p-3 bg-slate-900/30 rounded-xl border border-slate-800 text-slate-500 cursor-pointer hover:border-slate-700 transition-colors"
+                >
+                    <Paperclip className="w-5 h-5" />
+                    {attachmentPreview ? (
+                        <span className="text-sm text-emerald-400 flex-1 truncate">{formData.attachment_url}</span>
+                    ) : (
+                        <span className="text-sm flex-1">Anexar</span>
+                    )}
+                    <div className="ml-auto w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        {attachmentPreview ? (
+                            <Check className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                            <Plus className="w-4 h-4 text-blue-400" />
+                        )}
                     </div>
-                )}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,.pdf"
+                        className="hidden"
+                        onChange={handleFileChange}
+                    />
+                </div>
+
+                {/* Recurring Toggle - Always visible */}
+                <div className="flex items-center justify-between p-3 bg-slate-900/30 rounded-xl border border-slate-800">
+                    <div className="flex items-center gap-3">
+                        <RotateCcw className={`w-5 h-5 ${formData.is_recurring ? 'text-blue-400' : 'text-slate-500'}`} />
+                        <span className="text-slate-300 text-sm">Despesa Fixa</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, is_recurring: !formData.is_recurring })}
+                        className={`w-12 h-6 rounded-full transition-colors ${formData.is_recurring ? 'bg-blue-500' : 'bg-slate-700'}`}
+                    >
+                        <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform ${formData.is_recurring ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                    </button>
+                </div>
+
+                {/* Notes - Always visible */}
+                <div className="flex items-start gap-3 p-3 bg-slate-900/30 rounded-xl border border-slate-800">
+                    <FileText className="w-5 h-5 text-slate-500 mt-0.5" />
+                    <textarea
+                        placeholder="Observação"
+                        className="flex-1 bg-transparent text-white placeholder-slate-500 outline-none text-sm resize-none"
+                        rows={2}
+                        value={formData.notes}
+                        onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                    />
+                </div>
+
+
 
                 {/* Submit Button */}
                 <div className="pt-4">

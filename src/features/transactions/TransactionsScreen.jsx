@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Users } from 'lucide-react';
 import { NeoButton, NeoCard, FloatingActionButton, ModalOverlay, IconRender, DonutChart, MonthSelector } from '../../components/ui';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { AddTransactionForm } from './AddTransactionForm';
@@ -9,7 +9,7 @@ import { CreditCardExpenseForm } from './CreditCardExpenseForm';
 import { useData } from '../../contexts/DataContext';
 
 export const TransactionsScreen = ({ transactions, categories, accounts = [], onAddTransaction, onUpdateTransaction, onDeleteTransaction, onAddCategory, initialFilter = 'todos' }) => {
-    const { isReadOnly } = useData();
+    const { isReadOnly, activeWorkspace } = useData();
     const [showModal, setShowModal] = useState(false);
     const [showTransferModal, setShowTransferModal] = useState(false);
     const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -128,7 +128,14 @@ export const TransactionsScreen = ({ transactions, categories, accounts = [], on
                     </div>
                 ) : (
                     <>
-                        <h1 className="text-2xl font-bold text-white">Extrato</h1>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-2xl font-bold text-white">Extrato</h1>
+                            {activeWorkspace?.type === 'shared' && (
+                                <span className="flex items-center gap-1 px-2 py-0.5 bg-pink-500/20 text-pink-400 text-[10px] font-semibold rounded-full">
+                                    <Users className="w-3 h-3" /> Compartilhado
+                                </span>
+                            )}
+                        </div>
                         <NeoButton
                             variant="ghost"
                             className="!p-2 !rounded-full"

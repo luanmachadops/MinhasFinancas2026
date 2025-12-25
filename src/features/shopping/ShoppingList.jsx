@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Check, Trash2, Edit2 } from 'lucide-react';
+import { Plus, Check, Trash2, Edit2, Users } from 'lucide-react';
 import { NeoCard, NeoButton, NeoInput } from '../../components/ui';
 import { formatCurrency } from '../../utils/formatters';
 import { useData } from '../../contexts/DataContext';
 
 export const ShoppingList = ({ list, onAdd, onUpdate, onDelete, onClear }) => {
-    const { isReadOnly } = useData();
+    const { isReadOnly, activeWorkspace } = useData();
     const [newItem, setNewItem] = useState({ name: '', price: '', quantity: '1' });
     const [editingId, setEditingId] = useState(null);
     const [editData, setEditData] = useState({});
@@ -59,7 +59,14 @@ export const ShoppingList = ({ list, onAdd, onUpdate, onDelete, onClear }) => {
     return (
         <div className="space-y-6 pt-2 pb-24 animate-[fadeIn_0.5s_ease-out]">
             <header>
-                <h1 className="text-2xl font-bold text-white">Mercado</h1>
+                <div className="flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-white">Mercado</h1>
+                    {activeWorkspace?.type === 'shared' && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 bg-pink-500/20 text-pink-400 text-[10px] font-semibold rounded-full">
+                            <Users className="w-3 h-3" /> Compartilhado
+                        </span>
+                    )}
+                </div>
             </header>
 
             {/* Summary Card */}

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
     Target, Plus, ChevronLeft, ChevronRight,
-    Edit2, Trash2, Check, X, Copy
+    Edit2, Trash2, Check, X, Copy, Users
 } from 'lucide-react';
 import { NeoCard, NeoButton, NeoInput, ModalOverlay, FloatingActionButton, IconRender, MonthSelector } from '../../components/ui';
 import { formatCurrency } from '../../utils/formatters';
@@ -10,7 +10,7 @@ import { useData } from '../../contexts/DataContext';
 export const BudgetScreen = () => {
     const {
         budgets, addBudget, updateBudget, removeBudget,
-        categories, transactions, isReadOnly
+        categories, transactions, isReadOnly, activeWorkspace
     } = useData();
 
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -83,7 +83,14 @@ export const BudgetScreen = () => {
     return (
         <div className="space-y-6 pt-2 pb-24 animate-[fadeIn_0.5s_ease-out]">
             <header>
-                <h1 className="text-2xl font-bold text-white">Orçamento</h1>
+                <div className="flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-white">Orçamento</h1>
+                    {activeWorkspace?.type === 'shared' && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 bg-pink-500/20 text-pink-400 text-[10px] font-semibold rounded-full">
+                            <Users className="w-3 h-3" /> Compartilhado
+                        </span>
+                    )}
+                </div>
                 <p className="text-slate-400 text-sm">Planeje seus gastos mensais</p>
             </header>
 

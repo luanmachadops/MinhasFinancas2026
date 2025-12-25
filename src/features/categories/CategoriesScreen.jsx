@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, MoreVertical, ArrowLeft, ChevronRight, X } from 'lucide-react';
+import { Plus, MoreVertical, ArrowLeft, ChevronRight, X, Users } from 'lucide-react';
 import { NeoCard, IconRender, FloatingActionButton, ModalOverlay } from '../../components/ui';
 import { useData } from '../../contexts/DataContext';
 import { AVAILABLE_ICONS, AVAILABLE_COLORS } from '../../constants/initialData';
 
 export const CategoriesScreen = ({ onBack }) => {
-    const { categories, addCategory, removeCategory, updateCategory } = useData();
+    const { categories, addCategory, removeCategory, updateCategory, activeWorkspace } = useData();
     const [activeTab, setActiveTab] = useState('saida');
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
@@ -26,7 +26,14 @@ export const CategoriesScreen = ({ onBack }) => {
                 <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-800 text-slate-400">
                     <ArrowLeft className="w-5 h-5" />
                 </button>
-                <h1 className="text-xl font-bold text-white flex-1">Categorias</h1>
+                <div className="flex-1 flex items-center gap-2">
+                    <h1 className="text-xl font-bold text-white">Categorias</h1>
+                    {activeWorkspace?.type === 'shared' && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 bg-pink-500/20 text-pink-400 text-[10px] font-semibold rounded-full">
+                            <Users className="w-3 h-3" /> Compartilhado
+                        </span>
+                    )}
+                </div>
             </div>
 
             {/* Tabs */}

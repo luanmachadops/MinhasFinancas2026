@@ -1,18 +1,38 @@
 import React, { useState } from 'react';
 import {
     Settings, CreditCard, Tags, ChevronRight, LogOut, Trash2, Users,
-    Wallet, Grid3X3, Target, FileDown, FileUp, Calculator, Bell, Moon
+    Wallet, Grid3X3, Target, FileDown, FileUp, Calculator, Bell, Moon, AlertTriangle
 } from 'lucide-react';
 import { NeoButton, NeoCard, NeoInput, ModalOverlay, IconRender } from '../../components/ui';
 import { CategoryForm } from '../categories/CategoryForm';
 import { formatCurrency } from '../../utils/formatters';
 import { ProfileEditModal } from './ProfileEditModal';
+import { useData } from '../../contexts/DataContext';
 
 export const SettingsScreen = ({ user, accounts, onAddAccount, categories, onAddCategory, onRemoveCategory, onLogout, onNavigate }) => {
+    const { activeWorkspace } = useData();
     const [showAccountModal, setShowAccountModal] = useState(false);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const [activeTab, setActiveTab] = useState('gerenciar');
+
+    const CONFIRM_PHRASE = 'APAGAR TUDO';
+
+    const handleDeleteAllData = () => {
+        if (deleteConfirmText === CONFIRM_PHRASE) {
+            // Clear all localStorage
+            const keysToKeep = ['supabase.auth.token']; // Keep auth
+            Object.keys(localStorage).forEach(key => {
+                if (!keysToKeep.some(k => key.includes(k))) {
+                    localStorage.removeItem(key);
+                }
+            });
+            // Reload to reset state
+            window.location.reload();
+        }
+    };
 
     const MenuItem = ({ icon: Icon, label, onClick, color = 'blue', badge, toggle }) => (
         <NeoCard onClick={onClick} className="flex items-center justify-between group">
@@ -39,7 +59,14 @@ export const SettingsScreen = ({ user, accounts, onAddAccount, categories, onAdd
 
     return (
         <div className="space-y-6 pt-2 pb-24 animate-[fadeIn_0.5s_ease-out]">
-            <h1 className="text-2xl font-bold text-white">Ajustes</h1>
+            <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-white">Ajustes</h1>
+                {activeWorkspace?.type === 'shared' && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 bg-pink-500/20 text-pink-400 text-[10px] font-semibold rounded-full">
+                        <Users className="w-3 h-3" /> Compartilhado
+                    </span>
+                )}
+            </div>
 
             {/* Profile Card */}
             <div
@@ -67,19 +94,7 @@ export const SettingsScreen = ({ user, accounts, onAddAccount, categories, onAdd
                     <h3 className="text-white font-bold text-lg">{user?.user_metadata?.name || 'Usuário'}</h3>
                     <p className="text-slate-400 text-xs">{user?.email}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <ChevronRight className="text-slate-600 group-hover:text-slate-500 transition-colors" />
-                    <NeoButton
-                        variant="ghost"
-                        className="!p-2 rounded-full"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onLogout();
-                        }}
-                    >
-                        <LogOut className="w-5 h-5" />
-                    </NeoButton>
-                </div>
+                <ChevronRight className="text-slate-600 group-hover:text-slate-500 transition-colors" />
             </div>
 
             {/* Tabs */}
@@ -123,6 +138,22 @@ export const SettingsScreen = ({ user, accounts, onAddAccount, categories, onAdd
                     <MenuItem icon={Users} label="Compartilhamento" onClick={() => onNavigate('compartilhar')} color="pink" />
                     <MenuItem icon={Bell} label="Lembrete diário" onClick={() => { }} color="yellow" toggle={false} />
                     <MenuItem icon={Moon} label="Tema escuro" onClick={() => { }} color="indigo" toggle={true} />
+
+                    {/* Danger Zone - Only for personal workspace owner */}
+                    {activeWorkspace?.type === 'personal' && (
+                        <div className="pt-4 mt-4 border-t border-slate-800">
+                            <p className="text-xs text-slate-500 uppercase tracking-widest mb-2">Zona de Perigo</p>
+                            <button
+                                onClick={() => setShowDeleteModal(true)}
+                                className="w-full flex items-center gap-3 p-4 bg-rose-950/30 hover:bg-rose-900/40 border border-rose-900/50 rounded-2xl transition-colors group"
+                            >
+                                <div className="p-2 bg-rose-500/10 rounded-lg">
+                                    <Trash2 className="w-5 h-5 text-rose-400" />
+                                </div>
+                                <span className="text-rose-400 font-medium">Apagar Todos os Dados</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -140,6 +171,15 @@ export const SettingsScreen = ({ user, accounts, onAddAccount, categories, onAdd
                     </NeoCard>
                 </div>
             )}
+
+            {/* Logout Button - Always visible at bottom */}
+            <button
+                onClick={onLogout}
+                className="w-full flex items-center justify-center gap-3 p-4 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-2xl transition-colors group"
+            >
+                <LogOut className="w-5 h-5 text-rose-400 group-hover:text-rose-300" />
+                <span className="text-rose-400 font-medium group-hover:text-rose-300">Sair da Conta</span>
+            </button>
 
             {showAccountModal && (
                 <ModalOverlay title="Gerenciar Contas" onClose={() => setShowAccountModal(false)}>
@@ -200,6 +240,60 @@ export const SettingsScreen = ({ user, accounts, onAddAccount, categories, onAdd
 
             {showProfileModal && (
                 <ProfileEditModal onClose={() => setShowProfileModal(false)} />
+            )}
+
+            {/* Delete All Data Confirmation Modal */}
+            {showDeleteModal && (
+                <ModalOverlay
+                    title="⚠️ Apagar Todos os Dados"
+                    onClose={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+                >
+                    <div className="space-y-4">
+                        <div className="p-4 bg-rose-950/30 border border-rose-900/50 rounded-xl">
+                            <div className="flex items-start gap-3">
+                                <AlertTriangle className="w-6 h-6 text-rose-400 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-rose-300 font-semibold">Esta ação é irreversível!</p>
+                                    <p className="text-rose-400/80 text-sm mt-1">
+                                        Todos os seus dados serão apagados permanentemente, incluindo transações, contas, categorias e metas.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-slate-400 text-sm">
+                                Digite <span className="text-rose-400 font-bold">{CONFIRM_PHRASE}</span> para confirmar:
+                            </label>
+                            <input
+                                type="text"
+                                value={deleteConfirmText}
+                                onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                                placeholder={CONFIRM_PHRASE}
+                                className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-rose-500"
+                            />
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+                                className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleDeleteAllData}
+                                disabled={deleteConfirmText !== CONFIRM_PHRASE}
+                                className={`flex-1 py-3 px-4 rounded-xl font-medium transition-colors ${deleteConfirmText === CONFIRM_PHRASE
+                                    ? 'bg-rose-600 hover:bg-rose-500 text-white'
+                                    : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                    }`}
+                            >
+                                Apagar Tudo
+                            </button>
+                        </div>
+                    </div>
+                </ModalOverlay>
             )}
         </div>
     )

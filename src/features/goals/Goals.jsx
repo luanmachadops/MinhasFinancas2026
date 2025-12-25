@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, ArrowLeftRight } from 'lucide-react';
+import { Plus, ArrowLeftRight, Users } from 'lucide-react';
 import { NeoButton, NeoCard, ModalOverlay, IconRender } from '../../components/ui';
 import { formatCurrency } from '../../utils/formatters';
 import { AddGoalForm } from './AddGoalForm';
@@ -7,7 +7,7 @@ import { ManageGoalForm } from './ManageGoalForm';
 import { useData } from '../../contexts/DataContext';
 
 export const Goals = ({ goals, onUpdateGoal, onAddGoal }) => {
-    const { isReadOnly } = useData();
+    const { isReadOnly, activeWorkspace } = useData();
     const [showModal, setShowModal] = useState(false);
     const [selectedGoal, setSelectedGoal] = useState(null);
 
@@ -21,7 +21,14 @@ export const Goals = ({ goals, onUpdateGoal, onAddGoal }) => {
         <div className="space-y-6 pt-2 pb-24 animate-[fadeIn_0.5s_ease-out]">
             <header className="flex justify-between items-end">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Metas & Sonhos</h1>
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-bold text-white">Metas & Sonhos</h1>
+                        {activeWorkspace?.type === 'shared' && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 bg-pink-500/20 text-pink-400 text-[10px] font-semibold rounded-full">
+                                <Users className="w-3 h-3" /> Compartilhado
+                            </span>
+                        )}
+                    </div>
                     <p className="text-slate-400 text-sm mt-1">Seu dinheiro, separado e rendendo.</p>
                 </div>
                 {!isReadOnly && (

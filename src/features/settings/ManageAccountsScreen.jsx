@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, Plus, CreditCard, Wallet, Trash2, Edit2, Check, ExternalLink, ChevronDown, Search } from 'lucide-react';
+import { ChevronLeft, Plus, CreditCard, Wallet, Trash2, Edit2, Check, ExternalLink, ChevronDown, Search, Users } from 'lucide-react';
 import { NeoButton, NeoCard, NeoInput, ModalOverlay, FloatingActionButton, IconRender } from '../../components/ui';
 import { formatCurrency } from '../../utils/formatters';
 import { BANKS, COLORS } from '../../constants/banks';
+import { useData } from '../../contexts/DataContext';
 
 export const ManageAccountsScreen = ({ accounts, onAddAccount, onUpdateAccount, onRemoveAccount, onBack, onAddTransaction }) => {
+    const { activeWorkspace } = useData();
     const [activeTab, setActiveTab] = useState('conta');
     const [viewMode, setViewMode] = useState('list'); // 'list', 'detail', 'edit', 'create'
     const [selectedAccount, setSelectedAccount] = useState(null);
@@ -60,7 +62,14 @@ export const ManageAccountsScreen = ({ accounts, onAddAccount, onUpdateAccount, 
                 <NeoButton variant="ghost" className="!p-2 rounded-full" onClick={onBack}>
                     <ChevronLeft className="w-6 h-6" />
                 </NeoButton>
-                <h1 className="text-2xl font-bold text-white">Gerenciar {activeTab === 'conta' ? 'Contas' : 'Cartões'}</h1>
+                <div className="flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-white">Gerenciar {activeTab === 'conta' ? 'Contas' : 'Cartões'}</h1>
+                    {activeWorkspace?.type === 'shared' && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 bg-pink-500/20 text-pink-400 text-[10px] font-semibold rounded-full">
+                            <Users className="w-3 h-3" /> Compartilhado
+                        </span>
+                    )}
+                </div>
             </header>
 
             {/* Tabs */}

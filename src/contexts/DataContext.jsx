@@ -13,36 +13,96 @@ export const DataProvider = ({ children }) => {
 
     // Workspaces State
     const [activeWorkspace, setActiveWorkspace] = useState({ id: user?.id, name: 'Pessoal', type: 'personal', permissions: { read: true, write: true } });
+    const [loading, setLoading] = useState(true);
     const [sharedWorkspaces, setSharedWorkspaces] = useState([]);
+    const [workspaceAliases, setWorkspaceAliases] = useState(() => {
+        const saved = localStorage.getItem('workspace_aliases');
+        return saved ? JSON.parse(saved) : {};
+    });
+
+    // Save aliases whenever they change
+    useEffect(() => {
+        localStorage.setItem('workspace_aliases', JSON.stringify(workspaceAliases));
+    }, [workspaceAliases]);
+
+    const updateWorkspaceAlias = (workspaceId, newName) => {
+        setWorkspaceAliases(prev => {
+            const newAliases = { ...prev, [workspaceId]: newName };
+            return newAliases;
+        });
+        // Force refresh of workspaces list with new name
+        setSharedWorkspaces(prev => prev.map(ws => {
+            if (ws.id === workspaceId) {
+                return { ...ws, ownerName: newName, name: `Compartilhado (${newName})` };
+            }
+            return ws;
+        }));
+    };
 
     // Fetch Shared Workspaces
     useEffect(() => {
         if (!user) return;
 
         const fetchWorkspaces = async () => {
-            // Find shared_access where I am the guest (accepted)
-            // Join with owner to get their email/name
-            const { data: invites } = await supabase
-                .from('shared_access')
-                .select('*')
-                .eq('guest_email', user.email)
-                .eq('status', 'accepted');
+            try {
+                // Fetch shared_access where I am the guest and status is accepted
+                const { data: invites, error } = await supabase
+                    .from('shared_access')
+                    .select('*')
+                    .eq('guest_email', user.email)
+                    .eq('status', 'accepted');
 
-            if (invites) {
-                const workspaces = invites.map(inv => ({
-                    id: inv.owner_id,
-                    name: `Compartilhado (${inv.owner_id.slice(0, 5)}...)`,
-                    type: 'shared',
-                    permissions: inv.permissions || { read: true, write: false }
-                }));
-                setSharedWorkspaces(workspaces);
+                if (error) {
+                    console.error('Error fetching shared workspaces:', error);
+                    return;
+                }
+
+                if (invites && invites.length > 0) {
+                    const workspaces = invites.map(inv => {
+                        // Check for local alias first
+                        const alias = workspaceAliases[inv.owner_id];
+
+                        // Use alias, OR owner_name/email if available, OR fallback to ID
+                        const ownerName = alias
+                            || inv.owner_name
+                            || inv.owner_email?.split('@')[0]
+                            || `Usuário ${inv.owner_id.slice(0, 4)}`;
+
+                        const ownerAvatar = inv.owner_avatar || null;
+
+                        return {
+                            id: inv.owner_id,
+                            name: `Compartilhado (${ownerName})`,
+                            ownerName: ownerName,
+                            ownerAvatar: ownerAvatar, // Avatar needs SQL update, but name can be alliased
+                            type: 'shared',
+                            permissions: inv.permissions || { read: true, write: false }
+                        };
+                    });
+                    setSharedWorkspaces(workspaces);
+                } else {
+                    setSharedWorkspaces([]);
+                }
+            } catch (err) {
+                console.error("Unexpected error fetching workspaces:", err);
             }
         };
 
         fetchWorkspaces();
-        // Reset to personal on login
-        setActiveWorkspace({ id: user.id, name: 'Pessoal', type: 'personal', permissions: { read: true, write: true } });
-    }, [user]);
+
+        // Inscrever para mudanças em convites
+        const savedChanges = supabase
+            .channel('shared_access_changes_context')
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'shared_access', filter: `guest_email=eq.${user.email}` },
+                () => fetchWorkspaces()
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(savedChanges);
+        };
+    }, [user, workspaceAliases]);
 
     // We use the initial data as fallback for the first load
     const transactions = useSyncData('transactions', INITIAL_TRANSACTIONS);
@@ -259,6 +319,7 @@ export const DataProvider = ({ children }) => {
         setActiveWorkspace,
         sharedWorkspaces,
         availableWorkspaces: [{ id: user?.id, name: 'Pessoal', type: 'personal', permissions: { read: true, write: true } }, ...sharedWorkspaces],
+        updateWorkspaceAlias,
         isReadOnly,
 
         // Filtered Data
