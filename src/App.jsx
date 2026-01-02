@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FloatingNav } from './components/layout/FloatingNav';
 import { Dashboard } from './features/dashboard/Dashboard';
 import { TransactionsScreen } from './features/transactions/TransactionsScreen';
@@ -16,6 +16,8 @@ import { CreditCardDetailsScreen } from './features/creditCard/CreditCardDetails
 import { AuthScreen } from './features/auth/AuthScreen';
 import { useAuth } from './contexts/AuthContext';
 import { useData } from './contexts/DataContext';
+import { OnboardingOverlay } from './components/ui/OnboardingOverlay';
+import { useOnboarding } from './contexts/OnboardingContext';
 import { RefreshCw } from 'lucide-react';
 import './styles/global.css';
 
@@ -32,6 +34,15 @@ function App() {
 
     const [page, setPage] = useState('dashboard');
     const [pageProps, setPageProps] = useState({});
+
+    const { notifyPageChange, isActive: isOnboardingActive } = useOnboarding();
+
+    // Notify onboarding context when page changes
+    useEffect(() => {
+        if (notifyPageChange) {
+            notifyPageChange(page);
+        }
+    }, [page, notifyPageChange]);
 
     if (!user) {
         return <AuthScreen />;
@@ -74,6 +85,9 @@ function App() {
             </main>
 
             <FloatingNav current={page} onChange={p => handleNavigate(p)} />
+
+            {/* Onboarding Tutorial Overlay */}
+            <OnboardingOverlay />
         </div>
     );
 }

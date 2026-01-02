@@ -23,6 +23,7 @@ export const FloatingNav = ({ current, onChange }) => {
                     return (
                         <button
                             key={item.id}
+                            id={`nav-${item.id}`}
                             onClick={() => onChange(item.id)}
                             className={`
                 relative w-12 h-12 rounded-full flex items-center justify-center 
