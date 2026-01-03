@@ -210,7 +210,12 @@ export const SettingsScreen = ({ user, accounts, onAddAccount, categories, onAdd
 
             {/* Logout Button - Always visible at bottom */}
             <button
-                onClick={onLogout}
+                onClick={async () => {
+                    const btn = document.getElementById('logout-btn');
+                    if (btn) btn.innerText = 'Saindo...';
+                    await onLogout();
+                }}
+                id="logout-btn"
                 className="w-full flex items-center justify-center gap-3 p-4 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-2xl transition-colors group"
             >
                 <LogOut className="w-5 h-5 text-rose-400 group-hover:text-rose-300" />

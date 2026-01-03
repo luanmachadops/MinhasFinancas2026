@@ -45,7 +45,14 @@ export const AuthProvider = ({ children }) => {
     };
 
     const signOut = async () => {
-        await supabase.auth.signOut();
+        try {
+            await supabase.auth.signOut();
+        } catch (error) {
+            console.error('Error signing out:', error);
+        } finally {
+            setUser(null);
+            localStorage.removeItem('sb-rqdyygnuwwgkvuwwmjdl-auth-token'); // Clear Supabase token specifically if needed
+        }
     };
 
     const updateProfile = async (updates) => {
