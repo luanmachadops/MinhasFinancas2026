@@ -266,7 +266,7 @@ export const Dashboard = ({ transactions, categories, goals, accounts, onNavigat
                                 </div>
                                 <div className="text-right">
                                     <p className={`text-xs opacity-80 ${textColor}`}>{card.bank || 'Cartão'}</p>
-                                    <span className={`text-xs font-mono opacity-60 ${textColor}`}>**** 8842</span>
+                                    <span className={`text-xs font-mono opacity-60 ${textColor}`}>**** {card.last_digits || 'xxxx'}</span>
                                 </div>
                             </div>
 

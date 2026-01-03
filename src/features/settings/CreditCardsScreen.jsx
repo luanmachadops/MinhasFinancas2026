@@ -77,7 +77,7 @@ export const CreditCardsScreen = ({ accounts, onAddAccount, onUpdateAccount, onR
                                 </div>
                                 <div className="text-right">
                                     <p className={`text-xs opacity-80 ${textColor}`}>{card.bank || 'Cartão'}</p>
-                                    <span className={`text-xs font-mono opacity-60 ${textColor}`}>**** 8842</span>
+                                    <span className={`text-xs font-mono opacity-60 ${textColor}`}>**** {card.last_digits || 'xxxx'}</span>
                                 </div>
                             </div>
 
@@ -160,7 +160,8 @@ const CardForm = ({ initialData, bankAccounts, onSubmit, onDelete }) => {
             limit: parseFloat(formData.get('limit')) || 0,
             due_day: parseInt(formData.get('due_day')) || 1,
             card_type: formData.get('card_type'),
-            linked_account_id: linkedAccountId
+            linked_account_id: linkedAccountId,
+            last_digits: formData.get('last_digits')
         };
         onSubmit(data);
     };
@@ -260,7 +261,10 @@ const CardForm = ({ initialData, bankAccounts, onSubmit, onDelete }) => {
                 )}
             </div>
 
-            <NeoInput name="balance" label="Fatura Atual" type="number" step="0.01" defaultValue={initialData?.balance} />
+            <div className="grid grid-cols-2 gap-4">
+                <NeoInput name="balance" label="Fatura Atual" type="number" step="0.01" defaultValue={initialData?.balance} />
+                <NeoInput name="last_digits" label="4 Últimos Dígitos" type="text" maxLength="4" placeholder="0000" defaultValue={initialData?.last_digits || ''} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
                 <NeoInput name="limit" label="Limite Total" type="number" defaultValue={initialData?.limit} />
                 <NeoInput name="due_day" label="Dia Vencimento" type="number" min="1" max="31" defaultValue={initialData?.due_day} />
