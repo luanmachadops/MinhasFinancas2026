@@ -8,6 +8,7 @@ import { CategoryForm } from '../categories/CategoryForm';
 import { formatCurrency } from '../../utils/formatters';
 import { ProfileEditModal } from './ProfileEditModal';
 import { useData } from '../../contexts/DataContext';
+import { supabase } from '../../lib/supabase';
 
 export const SettingsScreen = ({ user, accounts, onAddAccount, categories, onAddCategory, onRemoveCategory, onLogout, onNavigate }) => {
     const { activeWorkspace } = useData();
@@ -16,21 +17,56 @@ export const SettingsScreen = ({ user, accounts, onAddAccount, categories, onAdd
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
     const [activeTab, setActiveTab] = useState('gerenciar');
 
     const CONFIRM_PHRASE = 'APAGAR TUDO';
 
-    const handleDeleteAllData = () => {
-        if (deleteConfirmText === CONFIRM_PHRASE) {
-            // Clear all localStorage
-            const keysToKeep = ['supabase.auth.token']; // Keep auth
+    const handleDeleteAllData = async () => {
+        if (deleteConfirmText !== CONFIRM_PHRASE || !user) return;
+
+        setIsDeleting(true);
+
+        try {
+            // Tables to delete from (order matters for foreign keys)
+            const tablesToDelete = [
+                'transactions',
+                'scheduled_transactions',
+                'shopping_items',
+                'transfers',
+                'budgets',
+                'goals',
+                'accounts',
+                'categories',
+                'tags'
+            ];
+
+            // Delete from each table in Supabase
+            for (const table of tablesToDelete) {
+                const { error } = await supabase
+                    .from(table)
+                    .delete()
+                    .eq('user_id', user.id);
+
+                if (error) {
+                    console.error(`Error deleting from ${table}:`, error);
+                }
+            }
+
+            // Clear all localStorage except auth
+            const keysToKeep = ['supabase.auth.token'];
             Object.keys(localStorage).forEach(key => {
                 if (!keysToKeep.some(k => key.includes(k))) {
                     localStorage.removeItem(key);
                 }
             });
+
             // Reload to reset state
             window.location.reload();
+        } catch (err) {
+            console.error('Error deleting all data:', err);
+            setIsDeleting(false);
+            alert('Erro ao apagar dados. Tente novamente.');
         }
     };
 
@@ -128,7 +164,7 @@ export const SettingsScreen = ({ user, accounts, onAddAccount, categories, onAdd
                     <MenuItem icon={Tags} label="Tags" onClick={() => { }} color="pink" badge="EM BREVE" />
                     <MenuItem icon={Target} label="Objetivos" onClick={() => onNavigate('metas')} color="blue" />
                     <MenuItem icon={FileUp} label="Importar dados" onClick={() => { }} color="cyan" />
-                    <MenuItem icon={FileDown} label="Exportar relatório" onClick={() => { }} color="teal" />
+                    <MenuItem icon={FileDown} label="Exportar relatório" onClick={() => onNavigate('exportar-relatorio')} color="teal" />
                     <MenuItem icon={Calculator} label="Calculadoras" onClick={() => { }} color="amber" badge="EM BREVE" />
                 </div>
             )}
@@ -277,19 +313,20 @@ export const SettingsScreen = ({ user, accounts, onAddAccount, categories, onAdd
                         <div className="flex gap-3 pt-2">
                             <button
                                 onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
-                                className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-colors"
+                                disabled={isDeleting}
+                                className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-colors disabled:opacity-50"
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleDeleteAllData}
-                                disabled={deleteConfirmText !== CONFIRM_PHRASE}
-                                className={`flex-1 py-3 px-4 rounded-xl font-medium transition-colors ${deleteConfirmText === CONFIRM_PHRASE
+                                disabled={deleteConfirmText !== CONFIRM_PHRASE || isDeleting}
+                                className={`flex-1 py-3 px-4 rounded-xl font-medium transition-colors ${deleteConfirmText === CONFIRM_PHRASE && !isDeleting
                                     ? 'bg-rose-600 hover:bg-rose-500 text-white'
                                     : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                                     }`}
                             >
-                                Apagar Tudo
+                                {isDeleting ? 'Apagando...' : 'Apagar Tudo'}
                             </button>
                         </div>
                     </div>

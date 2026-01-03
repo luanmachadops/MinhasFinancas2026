@@ -50,6 +50,16 @@ export const useSyncData = (tableName, initialData = []) => {
                 .filter(q => q.type === 'INSERT')
                 .map(q => q.payload.id);
 
+            // Items that have pending DELETE operations - these should NOT be restored from server
+            const pendingDeletes = new Set(
+                pendingQueue
+                    .filter(q => q.type === 'DELETE')
+                    .map(q => q.payload)
+            );
+
+            // Filter server data to exclude items pending deletion
+            const filteredServerData = serverData.filter(item => !pendingDeletes.has(item.id));
+
             const localOnlyItems = currentLocalData.filter(localItem =>
                 !serverIds.has(localItem.id) && pendingInserts.includes(localItem.id)
             );
@@ -58,7 +68,7 @@ export const useSyncData = (tableName, initialData = []) => {
             const currentInitialData = initialDataRef.current;
 
             if (tableName === 'categories' && currentInitialData.length > 0 && !hasSeededRef.current) {
-                const serverNames = serverData.map(c => c.name.toLowerCase());
+                const serverNames = filteredServerData.map(c => c.name.toLowerCase());
 
                 const missingDefaults = currentInitialData.filter(defaultCat =>
                     !serverIds.has(defaultCat.id) &&
@@ -85,21 +95,21 @@ export const useSyncData = (tableName, initialData = []) => {
 
                     if (!insertError) {
                         // Merge: server + seeded + local pending
-                        const mergedData = [...serverData, ...categoriesWithUserId, ...localOnlyItems];
+                        const mergedData = [...filteredServerData, ...categoriesWithUserId, ...localOnlyItems];
                         setData(mergedData);
                     } else {
                         console.log('Error seeding categories:', insertError);
                         // Still merge server with local pending
-                        setData([...serverData, ...localOnlyItems]);
+                        setData([...filteredServerData, ...localOnlyItems]);
                     }
                 } else {
                     hasSeededRef.current = true;
                     // Merge server with local pending
-                    setData([...serverData, ...localOnlyItems]);
+                    setData([...filteredServerData, ...localOnlyItems]);
                 }
             } else {
                 // Merge server data with local pending items
-                const mergedData = [...serverData, ...localOnlyItems];
+                const mergedData = [...filteredServerData, ...localOnlyItems];
                 setData(mergedData);
             }
         }

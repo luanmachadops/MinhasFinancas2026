@@ -1,15 +1,26 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, Plus, CreditCard, Edit2, Trash2, Check, ChevronDown } from 'lucide-react';
 import { NeoButton, NeoCard, NeoInput, ModalOverlay, FloatingActionButton } from '../../components/ui';
 import { formatCurrency } from '../../utils/formatters';
 import { BANKS, COLORS } from '../../constants/banks';
 
-export const CreditCardsScreen = ({ accounts, onAddAccount, onUpdateAccount, onRemoveAccount, onBack, onNavigate }) => {
+export const CreditCardsScreen = ({ accounts, onAddAccount, onUpdateAccount, onRemoveAccount, onBack, onNavigate, pageProps = {} }) => {
     const [viewMode, setViewMode] = useState('list'); // 'list', 'detail', 'edit', 'create'
     const [selectedCard, setSelectedCard] = useState(null);
 
     const creditCards = useMemo(() => accounts.filter(acc => acc.type === 'cartao'), [accounts]);
     const bankAccounts = useMemo(() => accounts.filter(acc => !acc.type || acc.type === 'conta'), [accounts]);
+
+    // Handle editCardId from navigation props (when coming from card details)
+    useEffect(() => {
+        if (pageProps.editCardId) {
+            const cardToEdit = creditCards.find(c => c.id === pageProps.editCardId);
+            if (cardToEdit) {
+                setSelectedCard(cardToEdit);
+                setViewMode('edit');
+            }
+        }
+    }, [pageProps.editCardId, creditCards]);
 
     const handleSave = (data) => {
         if (selectedCard && viewMode === 'edit') {
@@ -99,6 +110,13 @@ export const CreditCardsScreen = ({ accounts, onAddAccount, onUpdateAccount, onR
                         initialData={selectedCard}
                         bankAccounts={bankAccounts}
                         onSubmit={handleSave}
+                        onDelete={viewMode === 'edit' ? () => {
+                            if (window.confirm('Tem certeza que deseja excluir este cartão?')) {
+                                onRemoveAccount(selectedCard.id);
+                                setViewMode('list');
+                                setSelectedCard(null);
+                            }
+                        } : null}
                     />
                 </ModalOverlay>
             )}
@@ -106,7 +124,7 @@ export const CreditCardsScreen = ({ accounts, onAddAccount, onUpdateAccount, onR
     );
 };
 
-const CardForm = ({ initialData, bankAccounts, onSubmit }) => {
+const CardForm = ({ initialData, bankAccounts, onSubmit, onDelete }) => {
     const [selectedBankObj, setSelectedBankObj] = useState(() => {
         if (initialData?.bank) {
             return BANKS.find(b => b.name === initialData.bank) || BANKS.find(b => b.id === 'other');
@@ -138,9 +156,9 @@ const CardForm = ({ initialData, bankAccounts, onSubmit }) => {
             bank_gradient: finalGradient,
             bank_text: finalTextColor,
             type: 'cartao',
-            balance: parseFloat(formData.get('balance') || 0),
-            limit: parseFloat(formData.get('limit') || 0),
-            due_day: parseInt(formData.get('due_day') || 1),
+            balance: parseFloat(formData.get('balance')) || 0,
+            limit: parseFloat(formData.get('limit')) || 0,
+            due_day: parseInt(formData.get('due_day')) || 1,
             card_type: formData.get('card_type'),
             linked_account_id: linkedAccountId
         };
@@ -263,6 +281,17 @@ const CardForm = ({ initialData, bankAccounts, onSubmit }) => {
             </div>
 
             <NeoButton className="w-full mt-4" type="submit" disabled={!linkedAccountId}>Salvar</NeoButton>
+
+            {onDelete && (
+                <button
+                    type="button"
+                    onClick={onDelete}
+                    className="w-full mt-3 py-3 px-4 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-xl text-rose-400 font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                    <Trash2 className="w-4 h-4" />
+                    Excluir Cartão
+                </button>
+            )}
         </form>
     );
 };

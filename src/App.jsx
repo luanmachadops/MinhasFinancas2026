@@ -13,6 +13,7 @@ import { ScheduledTransactionsScreen } from './features/scheduled/ScheduledTrans
 import { BudgetScreen } from './features/budget/BudgetScreen';
 import { CategoriesScreen } from './features/categories/CategoriesScreen';
 import { CreditCardDetailsScreen } from './features/creditCard/CreditCardDetailsScreen';
+import { ExportReportScreen } from './features/reports/ExportReportScreen';
 import { AuthScreen } from './features/auth/AuthScreen';
 import { useAuth } from './contexts/AuthContext';
 import { useData } from './contexts/DataContext';
@@ -80,8 +81,9 @@ function App() {
                 {page === 'contas' && <ScheduledTransactionsScreen />}
                 {page === 'orcamento' && <BudgetScreen />}
                 {page === 'contas-bancarias' && <BankAccountsScreen accounts={accounts} onAddAccount={addAccount} onUpdateAccount={updateAccount} onRemoveAccount={removeAccount} onBack={() => handleNavigate('configuracao')} onAddTransaction={addTransaction} />}
-                {page === 'cartoes' && <CreditCardsScreen accounts={accounts} onAddAccount={addAccount} onUpdateAccount={updateAccount} onRemoveAccount={removeAccount} onBack={() => handleNavigate('configuracao')} onNavigate={handleNavigate} />}
+                {page === 'cartoes' && <CreditCardsScreen accounts={accounts} onAddAccount={addAccount} onUpdateAccount={updateAccount} onRemoveAccount={removeAccount} onBack={() => handleNavigate('configuracao')} onNavigate={handleNavigate} pageProps={pageProps} />}
                 {page === 'cartao-detalhes' && <CreditCardDetailsScreen cardId={pageProps.cardId} accounts={accounts} transactions={transactions} categories={categories} onNavigate={handleNavigate} onUpdateTransaction={updateTransaction} onDeleteTransaction={removeTransaction} onAddTransaction={addTransaction} onAddCategory={addCategory} />}
+                {page === 'exportar-relatorio' && <ExportReportScreen onBack={() => handleNavigate('configuracao')} />}
             </main>
 
             <FloatingNav current={page} onChange={p => handleNavigate(p)} />
