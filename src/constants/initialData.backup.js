@@ -119,18 +119,59 @@ export const AVAILABLE_COLORS = [
 ];
 
 // Gerar categorias iniciais com IDs únicos
-// Gerar categorias iniciais com IDs únicos baseados na lista completa
 export const INITIAL_CATEGORIES = [
-    ...DEFAULT_CATEGORIES.saida.map((cat, index) => ({
-        id: `def_s_${index}`,
-        type: 'saida',
-        ...cat
-    })),
-    ...DEFAULT_CATEGORIES.entrada.map((cat, index) => ({
-        id: `def_e_${index}`,
-        type: 'entrada',
-        ...cat
-    }))
+    // === CATEGORIAS DE SAÍDA (Despesas) ===
+    // Alimentação
+    { id: 'c1', name: 'Alimentação', icon: 'Utensils', type: 'saida', color: 'text-orange-400' },
+    { id: 'c2', name: 'Mercado', icon: 'ShoppingCart', type: 'saida', color: 'text-amber-400' },
+    { id: 'c3', name: 'Restaurante', icon: 'Coffee', type: 'saida', color: 'text-orange-400' },
+    // Moradia
+    { id: 'c4', name: 'Moradia', icon: 'Home', type: 'saida', color: 'text-rose-400' },
+    { id: 'c5', name: 'Aluguel', icon: 'Building2', type: 'saida', color: 'text-rose-400' },
+    { id: 'c6', name: 'Energia', icon: 'Zap', type: 'saida', color: 'text-yellow-400' },
+    { id: 'c7', name: 'Água', icon: 'Droplets', type: 'saida', color: 'text-blue-400' },
+    { id: 'c8', name: 'Internet', icon: 'Wifi', type: 'saida', color: 'text-cyan-400' },
+    { id: 'c9', name: 'Telefone', icon: 'Phone', type: 'saida', color: 'text-green-400' },
+    // Transporte
+    { id: 'c10', name: 'Transporte', icon: 'Car', type: 'saida', color: 'text-blue-400' },
+    { id: 'c11', name: 'Combustível', icon: 'Fuel', type: 'saida', color: 'text-amber-400' },
+    { id: 'c12', name: 'Uber/99', icon: 'MapPin', type: 'saida', color: 'text-slate-400' },
+    // Saúde
+    { id: 'c13', name: 'Saúde', icon: 'HeartPulse', type: 'saida', color: 'text-red-400' },
+    { id: 'c14', name: 'Farmácia', icon: 'Pill', type: 'saida', color: 'text-green-400' },
+    { id: 'c15', name: 'Academia', icon: 'Dumbbell', type: 'saida', color: 'text-purple-400' },
+    // Educação
+    { id: 'c16', name: 'Educação', icon: 'GraduationCap', type: 'saida', color: 'text-indigo-400' },
+    { id: 'c17', name: 'Cursos', icon: 'BookOpen', type: 'saida', color: 'text-indigo-400' },
+    // Lazer
+    { id: 'c18', name: 'Lazer', icon: 'Smile', type: 'saida', color: 'text-purple-400' },
+    { id: 'c19', name: 'Streaming', icon: 'Tv', type: 'saida', color: 'text-red-400' },
+    { id: 'c20', name: 'Viagem', icon: 'Plane', type: 'saida', color: 'text-sky-400' },
+    // Outros
+    { id: 'c21', name: 'Roupas', icon: 'Shirt', type: 'saida', color: 'text-pink-400' },
+    { id: 'c22', name: 'Beleza', icon: 'Sparkles', type: 'saida', color: 'text-pink-400' },
+    { id: 'c23', name: 'Pet', icon: 'PawPrint', type: 'saida', color: 'text-amber-400' },
+    { id: 'c24', name: 'Presentes', icon: 'Gift', type: 'saida', color: 'text-rose-400' },
+    { id: 'c25', name: 'Assinaturas', icon: 'CreditCard', type: 'saida', color: 'text-violet-400' },
+    { id: 'c26', name: 'Impostos', icon: 'Receipt', type: 'saida', color: 'text-slate-400' },
+    { id: 'c27', name: 'Seguros', icon: 'Shield', type: 'saida', color: 'text-teal-400' },
+    { id: 'c28', name: 'Outros', icon: 'MoreHorizontal', type: 'saida', color: 'text-slate-400' },
+
+    // === CATEGORIAS DE ENTRADA (Receitas) ===
+    { id: 'c50', name: 'Salário', icon: 'Briefcase', type: 'entrada', color: 'text-emerald-400' },
+    { id: 'c51', name: 'Freelance', icon: 'Laptop', type: 'entrada', color: 'text-blue-400' },
+    { id: 'c52', name: 'Comissão', icon: 'TrendingUp', type: 'entrada', color: 'text-green-400' },
+    { id: 'c53', name: 'Bônus', icon: 'Award', type: 'entrada', color: 'text-yellow-400' },
+    { id: 'c54', name: '13º Salário', icon: 'Gift', type: 'entrada', color: 'text-emerald-400' },
+    { id: 'c55', name: 'Férias', icon: 'Palmtree', type: 'entrada', color: 'text-cyan-400' },
+    { id: 'c56', name: 'Investimentos', icon: 'LineChart', type: 'entrada', color: 'text-violet-400' },
+    { id: 'c57', name: 'Dividendos', icon: 'PiggyBank', type: 'entrada', color: 'text-pink-400' },
+    { id: 'c58', name: 'Rendimentos', icon: 'Percent', type: 'entrada', color: 'text-teal-400' },
+    { id: 'c59', name: 'Aluguel Recebido', icon: 'Building', type: 'entrada', color: 'text-amber-400' },
+    { id: 'c60', name: 'Venda', icon: 'ShoppingBag', type: 'entrada', color: 'text-orange-400' },
+    { id: 'c61', name: 'Reembolso', icon: 'RefreshCcw', type: 'entrada', color: 'text-blue-400' },
+    { id: 'c62', name: 'Presente Recebido', icon: 'PartyPopper', type: 'entrada', color: 'text-rose-400' },
+    { id: 'c63', name: 'Outros', icon: 'MoreHorizontal', type: 'entrada', color: 'text-slate-400' },
 ];
 
 export const INITIAL_ACCOUNTS = [

@@ -106,7 +106,7 @@ export const DataProvider = ({ children }) => {
 
     // We use the initial data as fallback for the first load
     const transactions = useSyncData('transactions', INITIAL_TRANSACTIONS);
-    const categories = useSyncData('categories', INITIAL_CATEGORIES);
+    const categories = useSyncData('categories', []);
     const accounts = useSyncData('accounts', INITIAL_ACCOUNTS);
     const goals = useSyncData('goals', INITIAL_GOALS);
     const shoppingList = useSyncData('shopping_items', []);
@@ -328,10 +328,19 @@ export const DataProvider = ({ children }) => {
         updateTransaction: transactions.update,
         removeTransaction: removeTransactionWithBalance,
 
-        categories: filterByWorkspace(categories.data),
+        // Categories: Merge Default (Code) + User Custom (DB)
+        categories: [...INITIAL_CATEGORIES, ...filterByWorkspace(categories.data)],
         addCategory: createAddWrapper(categories.add),
-        updateCategory: categories.update,
-        removeCategory: categories.remove,
+        updateCategory: (id, updates) => {
+            // Only allow updating custom categories (those with UUIDs, not starting with def_)
+            if (id.toString().startsWith('def_')) return;
+            categories.update(id, updates);
+        },
+        removeCategory: (id) => {
+            // Only allow removing custom categories
+            if (id.toString().startsWith('def_')) return;
+            categories.remove(id);
+        },
 
         accounts: filterByWorkspace(accounts.data),
         addAccount: createAddWrapper(accounts.add),

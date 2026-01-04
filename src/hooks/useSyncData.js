@@ -68,45 +68,26 @@ export const useSyncData = (tableName, initialData = []) => {
             const currentInitialData = initialDataRef.current;
 
             if (tableName === 'categories' && currentInitialData.length > 0 && !hasSeededRef.current) {
+                // Auto-seeding disabled for hybrid category system
+                // The new approach merges fixed defaults (code) + user customs (DB)
+                // This prevents defaults from filling up the database or duplicating
+
+                hasSeededRef.current = true;
+                // Merge server with local pending
+                setData([...filteredServerData, ...localOnlyItems]);
+
+                /* 
+                // Legacy Seeding Logic - DISABLED
                 const serverNames = filteredServerData.map(c => c.name.toLowerCase());
-
-                const missingDefaults = currentInitialData.filter(defaultCat =>
-                    !serverIds.has(defaultCat.id) &&
-                    !serverNames.includes(defaultCat.name.toLowerCase())
+                
+                const missingDefaults = currentInitialData.filter(defaultCat => 
+                    // ... check logic
                 );
-
+                
                 if (missingDefaults.length > 0) {
-                    hasSeededRef.current = true;
-                    console.log(`Seeding ${missingDefaults.length} default categories...`);
-
-                    const categoriesWithUserId = missingDefaults.map(cat => ({
-                        id: crypto.randomUUID(),
-                        name: cat.name,
-                        icon: cat.icon,
-                        type: cat.type,
-                        color: cat.color,
-                        user_id: user.id,
-                        created_at: new Date().toISOString()
-                    }));
-
-                    const { error: insertError } = await supabase
-                        .from('categories')
-                        .insert(categoriesWithUserId);
-
-                    if (!insertError) {
-                        // Merge: server + seeded + local pending
-                        const mergedData = [...filteredServerData, ...categoriesWithUserId, ...localOnlyItems];
-                        setData(mergedData);
-                    } else {
-                        console.log('Error seeding categories:', insertError);
-                        // Still merge server with local pending
-                        setData([...filteredServerData, ...localOnlyItems]);
-                    }
-                } else {
-                    hasSeededRef.current = true;
-                    // Merge server with local pending
-                    setData([...filteredServerData, ...localOnlyItems]);
+                     // ... insert logic
                 }
+                */
             } else {
                 // Merge server data with local pending items
                 const mergedData = [...filteredServerData, ...localOnlyItems];

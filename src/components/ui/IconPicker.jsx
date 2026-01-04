@@ -43,7 +43,7 @@ export const IconPicker = ({ selectedIcon, selectedColor, onSelectIcon, onSelect
                 </div>
 
                 {/* Content */}
-                <div className="px-4 pb-6 max-h-[50vh] overflow-y-auto">
+                <div className="px-4 pb-24 max-h-[50vh] overflow-y-auto">
                     {activeTab === 'icons' && (
                         <>
                             {/* Search */}
@@ -65,8 +65,8 @@ export const IconPicker = ({ selectedIcon, selectedColor, onSelectIcon, onSelect
                                         key={iconName}
                                         onClick={() => onSelectIcon(iconName)}
                                         className={`p-3 rounded-xl transition-all ${selectedIcon === iconName
-                                                ? 'bg-blue-600 text-white ring-2 ring-blue-400'
-                                                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                                            ? 'bg-blue-600 text-white ring-2 ring-blue-400'
+                                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
                                             }`}
                                         title={iconName}
                                     >
@@ -84,8 +84,8 @@ export const IconPicker = ({ selectedIcon, selectedColor, onSelectIcon, onSelect
                                     key={color.value}
                                     onClick={() => onSelectColor(color.value)}
                                     className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${selectedColor === color.value
-                                            ? 'bg-slate-800 ring-2 ring-blue-400'
-                                            : 'hover:bg-slate-800'
+                                        ? 'bg-slate-800 ring-2 ring-blue-400'
+                                        : 'hover:bg-slate-800'
                                         }`}
                                 >
                                     <div className={`w-8 h-8 rounded-full ${color.bg}`} />
